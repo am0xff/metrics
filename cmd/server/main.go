@@ -12,7 +12,7 @@ func main() {
 	store := storage.NewMemStorage()
 	handler := handlers.NewHandler(store)
 
-	mux.HandleFunc("/update/", handler.ApiUpdate)
+	mux.HandleFunc("/update/", handler.APIUpdate)
 
 	err := http.ListenAndServe(":8080", mux)
 	if err != nil {

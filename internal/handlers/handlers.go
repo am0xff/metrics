@@ -15,7 +15,7 @@ func NewHandler(s *storage.MemStorage) *Handler {
 	return &Handler{Storage: s}
 }
 
-func (h *Handler) ApiUpdate(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) APIUpdate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
