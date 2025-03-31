@@ -15,63 +15,22 @@ func NewHandler(s *storage.MemStorage) *Handler {
 	return &Handler{Storage: s}
 }
 
-func (h *Handler) APIGauge(w http.ResponseWriter, r *http.Request) {
-	// Проверяем, что метод POST
+func (h *Handler) ApiUpdate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-
-	// Проверяем Content-Type
 	if r.Header.Get("Content-Type") != "text/plain" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
 	parts := strings.Split(r.URL.Path, "/")
-	// parts[0] пустая, далее "update", "gauge", "<name>", "<value>"
+	// parts[0] пустая, далее "update", "<тип>", "<имя>", "<значение>"
 	if len(parts) != 5 {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	metricName := parts[3]
-	metricValueStr := parts[4]
-
-	// Если имя метрики отсутствует
-	if metricName == "" {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	// Преобразуем значение метрики в float64 для gauge
-	value, err := strconv.ParseFloat(metricValueStr, 64)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	h.Storage.SetGauge(metricName, value)
-	w.WriteHeader(http.StatusOK)
-}
-
-func (h *Handler) APICounter(w http.ResponseWriter, r *http.Request) {
-	// Проверяем, что метод POST
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Проверяем Content-Type
-	if r.Header.Get("Content-Type") != "text/plain" {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) != 5 {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
+	metricType := parts[2]
 	metricName := parts[3]
 	metricValueStr := parts[4]
 
@@ -80,13 +39,25 @@ func (h *Handler) APICounter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Преобразуем значение метрики в int64 для counter
-	value, err := strconv.ParseInt(metricValueStr, 10, 64)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	switch metricType {
+	case "gauge":
+		value, err := strconv.ParseFloat(metricValueStr, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		h.Storage.SetGauge(metricName, value)
+		w.WriteHeader(http.StatusOK)
+	case "counter":
+		value, err := strconv.ParseInt(metricValueStr, 10, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		h.Storage.SetCounter(metricName, value)
+		w.WriteHeader(http.StatusOK)
+	default:
+		// Для неизвестного типа возвращаем 404
+		w.WriteHeader(http.StatusNotFound)
 	}
-
-	h.Storage.SetCounter(metricName, value)
-	w.WriteHeader(http.StatusOK)
 }
