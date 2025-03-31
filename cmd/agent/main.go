@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
@@ -13,6 +14,7 @@ const (
 	APIUrl         = "http://localhost:8080"
 	pollInterval   = 2 * time.Second
 	reportInterval = 10 * time.Second
+	contentType    = "text/plain"
 )
 
 type Metrics struct {
@@ -67,29 +69,27 @@ func reportMetrics(m *Metrics) {
 	// Отправка gauges метрик
 	for name, value := range m.Gauges {
 		url := fmt.Sprintf("%s/update/gauge/%s/%v", APIUrl, name, value)
-		resp, err := http.Post(url, "text/plain", nil)
+		req, err := http.Post(url, contentType, nil)
 		if err != nil {
 			log.Printf("%s %s: %v", err, name, err)
 			continue
 		}
-		err = resp.Body.Close()
-		if err != nil {
-			return
-		}
+
+		io.Copy(io.Discard, req.Body)
+		req.Body.Close()
 	}
 
 	// Отправка counter метрик
 	for name, value := range m.Counters {
 		url := fmt.Sprintf("%s/update/counter/%s/%d", APIUrl, name, value)
-		resp, err := http.Post(url, "text/plain", nil)
+		req, err := http.Post(url, contentType, nil)
 		if err != nil {
 			log.Printf("%s %s: %v", err, name, err)
 			continue
 		}
-		err = resp.Body.Close()
-		if err != nil {
-			return
-		}
+
+		io.Copy(io.Discard, req.Body)
+		req.Body.Close()
 	}
 }
 
