@@ -15,7 +15,7 @@ func NewHandler(s *storage.MemStorage) *Handler {
 	return &Handler{Storage: s}
 }
 
-func (h *Handler) ApiGauge(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) APIGauge(w http.ResponseWriter, r *http.Request) {
 	// Проверяем, что метод POST
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -54,7 +54,7 @@ func (h *Handler) ApiGauge(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *Handler) ApiCounter(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) APICounter(w http.ResponseWriter, r *http.Request) {
 	// Проверяем, что метод POST
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)

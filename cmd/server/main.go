@@ -12,8 +12,8 @@ func main() {
 	store := storage.NewMemStorage()
 	handler := handlers.NewHandler(store)
 
-	mux.HandleFunc("/update/gauge/", handler.ApiGauge)
-	mux.HandleFunc("/update/counter/", handler.ApiCounter)
+	mux.HandleFunc("/update/gauge/", handler.APIGauge)
+	mux.HandleFunc("/update/counter/", handler.APICounter)
 
 	err := http.ListenAndServe(":8080", mux)
 	if err != nil {
