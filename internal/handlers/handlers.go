@@ -57,7 +57,6 @@ func (h *Handler) APIUpdate(w http.ResponseWriter, r *http.Request) {
 		h.Storage.SetCounter(metricName, value)
 		w.WriteHeader(http.StatusOK)
 	default:
-		// Для неизвестного типа возвращаем 404
 		w.WriteHeader(http.StatusBadRequest)
 	}
 }
