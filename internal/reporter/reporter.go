@@ -5,12 +5,14 @@ import (
 	"io"
 	"log"
 	"math/rand"
-	"net/http"
 	"runtime"
+
+	"github.com/go-resty/resty/v2"
 )
 
-const (
-	APIUrl      = "http://localhost:8080"
+var (
+	client      *resty.Client
+	APIUrl      string
 	contentType = "text/plain"
 )
 
@@ -24,6 +26,11 @@ func NewMetrics() *Metrics {
 		Gauges:   make(map[string]float64),
 		Counters: make(map[string]int64),
 	}
+}
+
+func InitClient(apiUrl string) {
+	APIUrl = apiUrl
+	client = resty.New()
 }
 
 func UpdateMetrics(m *Metrics) {
@@ -62,30 +69,45 @@ func UpdateMetrics(m *Metrics) {
 	m.Counters["PollCount"]++
 }
 
-func ReportMetrics(m *Metrics) {
-	// Отправка gauges метрик
-	for name, value := range m.Gauges {
-		url := fmt.Sprintf("%s/update/gauge/%s/%v", APIUrl, name, value)
-		req, err := http.Post(url, contentType, nil)
-		if err != nil {
-			log.Printf("%s %s: %v", err, name, err)
-			continue
+func sendMetric(metricType, name string, value interface{}) error {
+	var url string
+	switch metricType {
+	case "gauge":
+		url = fmt.Sprintf("%s/update/gauge/%s/%v", APIUrl, name, value)
+	case "counter":
+		if v, ok := value.(int64); ok {
+			url = fmt.Sprintf("%s/update/counter/%s/%d", APIUrl, name, v)
+		} else {
+			return fmt.Errorf("value for counter %s is not int64", name)
 		}
-
-		io.Copy(io.Discard, req.Body)
-		req.Body.Close()
+	default:
+		return fmt.Errorf("unknown metric type: %s", metricType)
 	}
 
-	// Отправка counter метрик
-	for name, value := range m.Counters {
-		url := fmt.Sprintf("%s/update/counter/%s/%d", APIUrl, name, value)
-		req, err := http.Post(url, contentType, nil)
-		if err != nil {
-			log.Printf("%s %s: %v", err, name, err)
-			continue
-		}
+	resp, err := client.R().
+		SetHeader("Content-Type", contentType).
+		Post(url)
+	if err != nil {
+		return err
+	}
 
-		io.Copy(io.Discard, req.Body)
-		req.Body.Close()
+	_, err = io.Copy(io.Discard, resp.RawBody())
+	if err != nil {
+		return err
+	}
+	resp.RawBody().Close()
+	return nil
+}
+
+func ReportMetrics(m *Metrics) {
+	for name, value := range m.Gauges {
+		if err := sendMetric("gauge", name, value); err != nil {
+			log.Printf("Error sending gauge %s: %v", name, err)
+		}
+	}
+	for name, value := range m.Counters {
+		if err := sendMetric("counter", name, value); err != nil {
+			log.Printf("Error sending counter %s: %v", name, err)
+		}
 	}
 }
