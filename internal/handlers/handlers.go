@@ -63,29 +63,34 @@ func (h *Handler) GetGaugeMetric(rw http.ResponseWriter, r *http.Request) {
 	rw.Write([]byte(s))
 }
 
-func (h *Handler) UpdateGaugeMetric(rw http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateMetric(rw http.ResponseWriter, r *http.Request) {
+	metricType := chi.URLParam(r, "metric_type")
 	metricName := chi.URLParam(r, "metric_name")
 	metricValue := chi.URLParam(r, "metric_value")
 
-	value, err := strconv.ParseFloat(metricValue, 64)
-	if err != nil {
-		rw.WriteHeader(http.StatusBadRequest)
+	if metricName == "" {
+		rw.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	h.Storage.SetGauge(metricName, value)
-	rw.WriteHeader(http.StatusOK)
-}
-func (h *Handler) UpdateCounterMetric(rw http.ResponseWriter, r *http.Request) {
-	metricName := chi.URLParam(r, "metric_name")
-	metricValue := chi.URLParam(r, "metric_value")
-
-	value, err := strconv.ParseInt(metricValue, 10, 64)
-	if err != nil {
+	switch metricType {
+	case "gauge":
+		value, err := strconv.ParseFloat(metricValue, 64)
+		if err != nil {
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		h.Storage.SetGauge(metricName, value)
+		rw.WriteHeader(http.StatusOK)
+	case "counter":
+		value, err := strconv.ParseInt(metricValue, 10, 64)
+		if err != nil {
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		h.Storage.SetCounter(metricName, value)
+		rw.WriteHeader(http.StatusOK)
+	default:
 		rw.WriteHeader(http.StatusBadRequest)
-		return
 	}
-
-	h.Storage.SetCounter(metricName, value)
-	rw.WriteHeader(http.StatusOK)
 }

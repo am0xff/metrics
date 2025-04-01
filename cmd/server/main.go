@@ -25,14 +25,9 @@ func main() {
 			})
 		})
 		r.Route("/update", func(r chi.Router) {
-			r.Route("/gauge", func(r chi.Router) {
+			r.Route("/{metric_type}", func(r chi.Router) {
 				r.Route("/{metric_name}", func(r chi.Router) {
-					r.Post("/{metric_value}", handler.UpdateGaugeMetric)
-				})
-			})
-			r.Route("/counter", func(r chi.Router) {
-				r.Route("/{metric_name}", func(r chi.Router) {
-					r.Post("/{metric_value}", handler.UpdateCounterMetric)
+					r.Post("/{metric_value}", handler.UpdateMetric)
 				})
 			})
 		})
