@@ -1,14 +1,25 @@
 package main
 
 import (
+	"fmt"
 	"github.com/am0xff/metrics/internal/handlers"
 	"github.com/am0xff/metrics/internal/storage"
 	"github.com/go-chi/chi/v5"
-	"log"
 	"net/http"
 )
 
 func main() {
+	// обрабатываем аргументы командной строки
+	parseFlags()
+
+	if err := run(); err != nil {
+		panic(err)
+	}
+}
+
+func run() error {
+	fmt.Println("Running server on", flagRunAddr)
+
 	store := storage.NewMemStorage()
 	handler := handlers.NewHandler(store)
 
@@ -33,5 +44,5 @@ func main() {
 		})
 	})
 
-	log.Fatal(http.ListenAndServe(":8080", r))
+	return http.ListenAndServe(flagRunAddr, r)
 }
