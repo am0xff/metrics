@@ -37,7 +37,7 @@ func (h *Handler) GetCounterMetric(rw http.ResponseWriter, r *http.Request) {
 	metricName := chi.URLParam(r, "metric_name")
 	value, ok := h.Storage.GetCounter(metricName)
 
-	if ok != true {
+	if !ok {
 		rw.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -52,7 +52,7 @@ func (h *Handler) GetGaugeMetric(rw http.ResponseWriter, r *http.Request) {
 	metricName := chi.URLParam(r, "metric_name")
 	value, ok := h.Storage.GetGauge(metricName)
 
-	if ok != true {
+	if !ok {
 		rw.WriteHeader(http.StatusNotFound)
 		return
 	}
