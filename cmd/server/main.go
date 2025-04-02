@@ -1,48 +1,24 @@
 package main
 
 import (
-	"fmt"
-	"github.com/am0xff/metrics/internal/handlers"
-	"github.com/am0xff/metrics/internal/storage"
-	"github.com/go-chi/chi/v5"
+	"flag"
+	"log"
 	"net/http"
+
+	"github.com/am0xff/metrics/internal/server"
+	"github.com/am0xff/metrics/internal/storage"
 )
 
 func main() {
-	// обрабатываем аргументы командной строки
-	parseFlags()
-
-	if err := run(); err != nil {
-		panic(err)
-	}
-}
-
-func run() error {
-	fmt.Println("Running server on", flagRunAddr)
+	addr := flag.String("a", "localhost:8080", "Адрес HTTP сервера")
+	flag.Parse()
 
 	store := storage.NewMemStorage()
-	handler := handlers.NewHandler(store)
+	srv := server.NewServer(store)
+	router := server.SetupRoutes(srv)
 
-	r := chi.NewRouter()
-
-	r.Route("/", func(r chi.Router) {
-		r.Get("/", handler.RootHandle)
-		r.Route("/value", func(r chi.Router) {
-			r.Route("/gauge", func(r chi.Router) {
-				r.Get("/{metric_name}", handler.GetGaugeMetric)
-			})
-			r.Route("/counter", func(r chi.Router) {
-				r.Get("/{metric_name}", handler.GetCounterMetric)
-			})
-		})
-		r.Route("/update", func(r chi.Router) {
-			r.Route("/{metric_type}", func(r chi.Router) {
-				r.Route("/{metric_name}", func(r chi.Router) {
-					r.Post("/{metric_value}", handler.UpdateMetric)
-				})
-			})
-		})
-	})
-
-	return http.ListenAndServe(flagRunAddr, r)
+	log.Printf("Запуск сервера на %s\n", *addr)
+	if err := http.ListenAndServe(*addr, router); err != nil {
+		log.Fatal(err)
+	}
 }
