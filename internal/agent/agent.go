@@ -13,9 +13,9 @@ import (
 )
 
 type AgentConfig struct {
-	ServerAddr     string `env:"ADDRESS"`
-	PollInterval   int    `env:"POLL_INTERVAL"`
-	ReportInterval int    `env:"REPORT_INTERVAL"`
+	ServerAddr     string `env:"ADDRESS" envDefault:"localhost:8080"`
+	PollInterval   int    `env:"POLL_INTERVAL" envDefault:"2"`
+	ReportInterval int    `env:"REPORT_INTERVAL" envDefault:"10"`
 }
 
 type Agent struct {
