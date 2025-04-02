@@ -65,7 +65,7 @@ func (s *Server) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		io.WriteString(w, fmt.Sprintf("%f", value))
+		io.WriteString(w, strconv.FormatFloat(value, 'f', -1, 64))
 	case "counter":
 		value, ok := s.Storage.GetCounter(name)
 		if !ok {
@@ -73,7 +73,7 @@ func (s *Server) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		io.WriteString(w, fmt.Sprintf("%d", value))
+		io.WriteString(w, strconv.FormatInt(value, 10))
 	default:
 		http.Error(w, "Unknown metric type", http.StatusBadRequest)
 		return

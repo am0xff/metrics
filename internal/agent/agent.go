@@ -88,7 +88,7 @@ func (a *Agent) sendMetric(metricType, name, valueStr string) {
 
 func (a *Agent) reportMetrics() {
 	for name, value := range a.gaugeMetrics {
-		a.sendMetric("gauge", name, fmt.Sprintf("%f", value))
+		a.sendMetric("gauge", name, strconv.FormatFloat(value, 'f', -1, 64))
 	}
 	for name, value := range a.counterMetrics {
 		a.sendMetric("counter", name, strconv.FormatInt(value, 10))
