@@ -3,6 +3,7 @@ package agent
 import (
 	"flag"
 	"fmt"
+	"github.com/caarlos0/env/v6"
 	"log"
 	"math/rand"
 	"net/http"
@@ -12,9 +13,9 @@ import (
 )
 
 type AgentConfig struct {
-	ServerAddr     string
-	PollInterval   time.Duration
-	ReportInterval time.Duration
+	ServerAddr     string `env:"ADDRESS"`
+	PollInterval   int    `env:"POLL_INTERVAL"`
+	ReportInterval int    `env:"REPORT_INTERVAL"`
 }
 
 type Agent struct {
@@ -96,15 +97,21 @@ func (a *Agent) reportMetrics() {
 }
 
 func Run() {
-	serverAddr := flag.String("a", "localhost:8080", "HTTP сервер адрес")
-	reportInterval := flag.Int("r", 10, "Интервал отправки метрик (сек)")
-	pollInterval := flag.Int("p", 2, "Интервал опроса метрик (сек)")
+	var config AgentConfig
+
+	if err := env.Parse(&config); err != nil {
+		log.Fatalf("Parse env: %v", err)
+	}
+
+	serverAddr := flag.String("a", config.ServerAddr, "HTTP сервер адрес")
+	reportInterval := flag.Int("r", config.ReportInterval, "Интервал отправки метрик (сек)")
+	pollInterval := flag.Int("p", config.PollInterval, "Интервал опроса метрик (сек)")
 	flag.Parse()
 
-	config := AgentConfig{
+	config = AgentConfig{
 		ServerAddr:     *serverAddr,
-		ReportInterval: time.Duration(*reportInterval) * time.Second,
-		PollInterval:   time.Duration(*pollInterval) * time.Second,
+		ReportInterval: *reportInterval,
+		PollInterval:   *pollInterval,
 	}
 
 	agent := NewAgent(config)
@@ -113,14 +120,14 @@ func Run() {
 	go func() {
 		for {
 			agent.collectMetrics()
-			time.Sleep(config.PollInterval)
+			time.Sleep(time.Duration(config.PollInterval) * time.Second)
 		}
 	}()
 
 	go func() {
 		for {
 			agent.reportMetrics()
-			time.Sleep(config.ReportInterval)
+			time.Sleep(time.Duration(config.ReportInterval) * time.Second)
 		}
 	}()
 
