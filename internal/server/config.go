@@ -1,5 +1,5 @@
 package server
 
 type Config struct {
-	ServerAddr string
+	ServerAddr string `env:"ADDRESS" envDefault:"localhost:8080"`
 }
