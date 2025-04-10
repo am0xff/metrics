@@ -133,7 +133,7 @@ func Run() {
 	}
 
 	agent := NewAgent(config)
-	log.Println("Запуск агента")
+	fmt.Println("Running agent on", config.ServerAddr)
 
 	var latestGauges map[string]float64
 	var latestCounters map[string]int64

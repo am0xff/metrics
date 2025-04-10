@@ -25,6 +25,7 @@ func Run() {
 	}
 
 	serverAddr := flag.String("a", config.ServerAddr, "HTTP сервер адрес")
+	flag.Parse()
 
 	config = Config{
 		ServerAddr: *serverAddr,
