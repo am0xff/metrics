@@ -114,11 +114,11 @@ func NewAgent(config Config) *Agent {
 	}
 }
 
-func Run() {
+func Run() error {
 	var config Config
 
 	if err := env.Parse(&config); err != nil {
-		log.Fatalf("Parse env: %v", err)
+		return err
 	}
 
 	serverAddr := flag.String("a", config.ServerAddr, "HTTP сервер адрес")
