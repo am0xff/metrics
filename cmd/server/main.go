@@ -1,7 +1,11 @@
 package main
 
-import "github.com/am0xff/metrics/internal/server"
+import (
+	"github.com/am0xff/metrics/internal/server"
+)
 
 func main() {
-	server.Run()
+	if err := server.Run(); err != nil {
+		panic(err)
+	}
 }

@@ -5,5 +5,7 @@ import (
 )
 
 func main() {
-	agent.Run()
+	if err := agent.Run(); err != nil {
+		panic(err)
+	}
 }

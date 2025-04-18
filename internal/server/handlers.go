@@ -1,44 +1,39 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/am0xff/metrics/internal/logger"
+	"github.com/am0xff/metrics/internal/models"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"strconv"
-
-	"github.com/go-chi/chi/v5"
 )
 
-// UpdateMetricHandler обрабатывает POST запросы вида:
-// /update/{type}/{name}/{value}
 func (s *Server) UpdateMetricHandler(w http.ResponseWriter, r *http.Request) {
-	metricType := chi.URLParam(r, "type")
-	name := chi.URLParam(r, "name")
-	valueStr := chi.URLParam(r, "value")
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
+	}
 
-	if name == "" {
-		http.Error(w, "Metric name not provided", http.StatusNotFound)
+	var req models.Metrics
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&req); err != nil {
+		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	switch metricType {
+	switch req.MType {
 	case "gauge":
-		value, err := strconv.ParseFloat(valueStr, 64)
-		if err != nil {
-			http.Error(w, "Invalid gauge value", http.StatusBadRequest)
-			return
-		}
-		if err := s.Storage.UpdateGauge(name, value); err != nil {
+		value := *req.Value
+		if err := s.Storage.UpdateGauge(req.ID, value); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case "counter":
-		value, err := strconv.ParseInt(valueStr, 10, 64)
-		if err != nil {
-			http.Error(w, "Invalid counter value", http.StatusBadRequest)
-			return
-		}
-		if err := s.Storage.UpdateCounter(name, value); err != nil {
+		value := *req.Delta
+		if err := s.Storage.UpdateCounter(req.ID, value); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -51,15 +46,22 @@ func (s *Server) UpdateMetricHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "OK")
 }
 
-// GetMetricHandler обрабатывает GET запросы вида:
-// /value/{type}/{name}
 func (s *Server) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
-	metricType := chi.URLParam(r, "type")
-	name := chi.URLParam(r, "name")
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
+	}
 
-	switch metricType {
+	var req models.Metrics
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&req); err != nil {
+		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	switch req.MType {
 	case "gauge":
-		value, ok := s.Storage.GetGauge(name)
+		value, ok := s.Storage.GetGauge(req.ID)
 		if !ok {
 			http.Error(w, "Metric not found", http.StatusNotFound)
 			return
@@ -67,7 +69,7 @@ func (s *Server) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		io.WriteString(w, strconv.FormatFloat(value, 'f', -1, 64))
 	case "counter":
-		value, ok := s.Storage.GetCounter(name)
+		value, ok := s.Storage.GetCounter(req.ID)
 		if !ok {
 			http.Error(w, "Metric not found", http.StatusNotFound)
 			return
