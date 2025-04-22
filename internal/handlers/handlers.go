@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"github.com/am0xff/metrics/internal/models"
 	"github.com/am0xff/metrics/internal/storage"
+	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -18,7 +20,7 @@ func NewHandler(storage *storage.MemStorage) *Handler {
 	return &Handler{storage: storage}
 }
 
-func (h *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) POSTGetMetric(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -79,7 +81,7 @@ func (h *Handler) GetMetric(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) POSTUpdateMetric(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -142,6 +144,69 @@ func (h *Handler) UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *Handler) GETGetMetric(w http.ResponseWriter, r *http.Request) {
+	metricType := chi.URLParam(r, "type")
+	name := chi.URLParam(r, "name")
+
+	var responseBody string
+
+	switch metricType {
+	case "gauge":
+		v, ok := h.storage.Gauges.Get(name)
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		responseBody = strconv.FormatFloat(float64(v), 'f', -1, 64)
+	case "counter":
+		v, ok := h.storage.Counters.Get(name)
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		responseBody = strconv.FormatInt(int64(v), 10)
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(responseBody))
+}
+
+func (h *Handler) GETUpdateMetric(w http.ResponseWriter, r *http.Request) {
+	metricType := chi.URLParam(r, "type")
+	name := chi.URLParam(r, "name")
+	valueStr := chi.URLParam(r, "value")
+
+	if name == "" {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	switch metricType {
+	case "gauge":
+		value, err := strconv.ParseFloat(valueStr, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		h.storage.Gauges.Set(name, storage.Gauge(value))
+	case "counter":
+		value, err := strconv.ParseInt(valueStr, 10, 64)
+		if err != nil {
+			http.Error(w, "Invalid counter value", http.StatusBadRequest)
+			return
+		}
+		h.storage.Counters.Set(name, storage.Counter(value))
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func (h *Handler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -169,45 +234,3 @@ func (h *Handler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-
-//Сервер должен быть доступен по адресу `http://localhost:8080`, а также:
-//
-//- Принимать и хранить произвольные метрики двух типов:
-//- Тип `gauge`, `float64` — новое значение должно замещать предыдущее.
-//- Тип `counter`, `int64` — новое значение должно добавляться к предыдущему, если какое-то значение уже было известно серверу.
-//- Принимать метрики по протоколу HTTP методом `POST`.
-//- Принимать данные в формате
-// `http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>`,
-// `Content-Type: text/plain`.
-//- При успешном приёме возвращать `http.StatusOK`.
-//- При попытке передать запрос без имени метрики возвращать `http.StatusNotFound`.
-//- При попытке передать запрос с некорректным типом метрики или значением возвращать
-//  `http.StatusBadRequest`.
-
-// Доработайте сервер так, чтобы в ответ на запрос
-// `GET http://<АДРЕС_СЕРВЕРА>/value/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>` он возвращал аккумулированное значение метрики в текстовом виде со статусом `http.StatusOK`.
-// При попытке запроса неизвестной метрики сервер должен возвращать
-// `http.StatusNotFound`.
-// По запросу `GET http://<АДРЕС_СЕРВЕРА>/`
-// сервер должен отдавать HTML-страницу со списком имён и значений всех известных ему на текущий момент метрик.
-
-// Для передачи метрик на сервер используйте Content-Type: application/json.
-// В теле запроса должен быть описанный выше JSON.
-// Передавать метрики нужно через POST update/.
-// В теле ответа отправляйте JSON той же структуры с актуальным (изменённым) значением Value.
-
-// SET
-// curl -X POST http://localhost:8080/update/ \
-//  -H "Content-Type: application/json" \
-//  -d '{"id":"someMetric","type":"gauge","value":42.7}'
-//curl -X POST http://localhost:8080/update/ \
-//  -H "Content-Type: application/json" \
-//  -d '{"id":"requests","type":"counter","delta":100}'
-
-// GET
-//curl -X POST http://localhost:8080/value/ \
-//  -H "Content-Type: application/json" \
-//  -d '{"id":"someMetric","type":"gauge"}'
-//curl -X POST http://localhost:8080/value/ \
-//-H "Content-Type: application/json" \
-//-d '{"id":"requests","type":"counter"}'

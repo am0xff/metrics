@@ -16,7 +16,7 @@ func TestGetMetric(t *testing.T) {
 	s.Gauges.Set("metric_of_gauge", 1)
 	s.Counters.Set("metric_of_counter", 2)
 
-	h := http.HandlerFunc(handler.GetMetric)
+	h := http.HandlerFunc(handler.POSTGetMetric)
 	srv := httptest.NewServer(h)
 	defer srv.Close()
 
@@ -105,7 +105,7 @@ func TestUpdateMetric(t *testing.T) {
 	s := storage.NewMemStorage()
 	handler := NewHandler(s)
 
-	h := http.HandlerFunc(handler.UpdateMetric)
+	h := http.HandlerFunc(handler.POSTUpdateMetric)
 	srv := httptest.NewServer(h)
 	defer srv.Close()
 

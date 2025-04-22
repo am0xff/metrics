@@ -13,7 +13,9 @@ func SetupRoutes(s *storage.MemStorage) http.Handler {
 	handler := handlers.NewHandler(s)
 
 	r.Get("/", handler.GetMetrics)
-	r.Post("/value", handler.GetMetric)
-	r.Post("/update", handler.UpdateMetric)
+	r.Post("/value", handler.POSTGetMetric)
+	r.Post("/update", handler.POSTUpdateMetric)
+	r.Get("/value/{type}/{name}", handler.GETGetMetric)
+	r.Post("/update/{type}/{name}/{value}", handler.GETUpdateMetric)
 	return r
 }
