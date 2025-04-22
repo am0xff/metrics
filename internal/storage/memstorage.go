@@ -35,8 +35,8 @@ func (gs *GaugeStorage) Keys() []string {
 	return gs.storage.Keys()
 }
 
-func (cs *CounterStorage) Set(key string, value Counter) {
-	cs.storage.Set(key, value)
+func (cs *CounterStorage) Add(key string, value Counter) {
+	cs.storage.Add(key, value)
 }
 
 func (cs *CounterStorage) Get(key string) (Counter, bool) {

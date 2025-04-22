@@ -123,7 +123,7 @@ func (h *Handler) POSTUpdateMetric(w http.ResponseWriter, r *http.Request) {
 		}
 
 		newValue := storage.Counter(*req.Delta)
-		h.storage.Counters.Set(req.ID, newValue)
+		h.storage.Counters.Add(req.ID, newValue)
 
 		resp = models.Metrics{
 			ID:    req.ID,
@@ -195,7 +195,7 @@ func (h *Handler) GETUpdateMetric(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid counter value", http.StatusBadRequest)
 			return
 		}
-		h.storage.Counters.Set(name, storage.Counter(value))
+		h.storage.Counters.Add(name, storage.Counter(value))
 	default:
 		w.WriteHeader(http.StatusBadRequest)
 		return
