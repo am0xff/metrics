@@ -148,8 +148,6 @@ func (h *Handler) GETGetMetric(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "type")
 	name := chi.URLParam(r, "name")
 
-	var responseBody string
-
 	switch metricType {
 	case "gauge":
 		v, ok := h.storage.Gauges.Get(name)
@@ -157,21 +155,20 @@ func (h *Handler) GETGetMetric(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		responseBody = strconv.FormatFloat(float64(v), 'f', -1, 64)
+		_, _ = io.WriteString(w, strconv.FormatFloat(float64(v), 'f', -1, 64))
 	case "counter":
 		v, ok := h.storage.Counters.Get(name)
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		responseBody = strconv.FormatInt(int64(v), 10)
+		_, _ = io.WriteString(w, strconv.FormatInt(int64(v), 10))
 	default:
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(responseBody))
 }
 
 func (h *Handler) GETUpdateMetric(w http.ResponseWriter, r *http.Request) {
