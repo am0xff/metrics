@@ -1,49 +1,48 @@
 package storage
 
+type Gauge float64
+type Counter int64
+
+type GaugeStorage struct {
+	storage Storage[Gauge]
+}
+
+type CounterStorage struct {
+	storage Storage[Counter]
+}
+
 type MemStorage struct {
-	gauges   map[string]float64
-	counters map[string]int64
+	Gauges   *Storage[Gauge]
+	Counters *Storage[Counter]
 }
 
 func NewMemStorage() *MemStorage {
 	return &MemStorage{
-		gauges:   make(map[string]float64),
-		counters: make(map[string]int64),
+		Gauges:   NewStorage[Gauge](),
+		Counters: NewStorage[Counter](),
 	}
 }
 
-func (m *MemStorage) UpdateGauge(name string, value float64) error {
-	m.gauges[name] = value
-	return nil
+func (gs *GaugeStorage) Set(key string, value Gauge) {
+	gs.storage.Set(key, value)
 }
 
-func (m *MemStorage) UpdateCounter(name string, value int64) error {
-	m.counters[name] += value
-	return nil
+func (gs *GaugeStorage) Get(key string) (Gauge, bool) {
+	return gs.storage.Get(key)
 }
 
-func (m *MemStorage) GetGauge(name string) (float64, bool) {
-	v, ok := m.gauges[name]
-	return v, ok
+func (gs *GaugeStorage) Keys() []string {
+	return gs.storage.Keys()
 }
 
-func (m *MemStorage) GetCounter(name string) (int64, bool) {
-	v, ok := m.counters[name]
-	return v, ok
+func (cs *CounterStorage) Set(key string, value Counter) {
+	cs.storage.Set(key, value)
 }
 
-func (m *MemStorage) GetAllGauges() map[string]float64 {
-	copyMap := make(map[string]float64)
-	for k, v := range m.gauges {
-		copyMap[k] = v
-	}
-	return copyMap
+func (cs *CounterStorage) Get(key string) (Counter, bool) {
+	return cs.storage.Get(key)
 }
 
-func (m *MemStorage) GetAllCounters() map[string]int64 {
-	copyMap := make(map[string]int64)
-	for k, v := range m.counters {
-		copyMap[k] = v
-	}
-	return copyMap
+func (cs *CounterStorage) Keys() []string {
+	return cs.storage.Keys()
 }

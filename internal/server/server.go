@@ -4,18 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"github.com/am0xff/metrics/internal/logger"
+	"github.com/am0xff/metrics/internal/router"
 	"github.com/am0xff/metrics/internal/storage"
 	"github.com/caarlos0/env/v6"
 	"net/http"
 )
-
-type Server struct {
-	Storage *storage.MemStorage
-}
-
-func NewServer(storage *storage.MemStorage) *Server {
-	return &Server{Storage: storage}
-}
 
 func Run() error {
 	var config Config
@@ -35,10 +28,9 @@ func Run() error {
 		ServerAddr: *serverAddr,
 	}
 
-	store := storage.NewMemStorage()
-	srv := NewServer(store)
-	router := SetupRoutes(srv)
+	s := storage.NewMemStorage()
+	r := router.SetupRoutes(s)
 
 	fmt.Println("Running server on", config.ServerAddr)
-	return http.ListenAndServe(config.ServerAddr, logger.WithLogger(router))
+	return http.ListenAndServe(config.ServerAddr, logger.WithLogger(r))
 }
