@@ -2,6 +2,7 @@ package agent
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"github.com/am0xff/metrics/internal/models"
@@ -59,21 +60,33 @@ func (r *Reporter) send(metricType, name, value string) {
 		return
 	}
 
-	payload, err := json.Marshal(m)
+	data, err := json.Marshal(m)
 	if err != nil {
 		log.Println("json marshal failed:", err)
 		return
 	}
 
+	var buf bytes.Buffer
+	gz, err := gzip.NewWriterLevel(&buf, gzip.BestSpeed)
+	if err != nil {
+		log.Println("gzip.NewWriterLevel failed:", err)
+	}
+	if _, err := gz.Write(data); err != nil {
+		log.Println("gzip write failed:", err)
+		return
+	}
+	defer gz.Close()
+
 	url := fmt.Sprintf("http://%s/update/", r.serverAddr)
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(payload))
+	req, err := http.NewRequest(http.MethodPost, url, &buf)
 	if err != nil {
 		log.Println("create request:", err)
 		return
 	}
-	req.Header.Set("Content-Type", "application/json")
 
-	// Отправляем
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
+
 	resp, err := r.client.Do(req)
 	if err != nil {
 		log.Println("send metric:", err)
@@ -81,7 +94,6 @@ func (r *Reporter) send(metricType, name, value string) {
 	}
 	defer resp.Body.Close()
 
-	// Проверяем ответ
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("bad status %d for %s/%s\n", resp.StatusCode, metricType, name)
 	}
