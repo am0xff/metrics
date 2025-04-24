@@ -31,8 +31,8 @@ func (c *compressWriter) Write(p []byte) (int, error) {
 
 func (c *compressWriter) WriteHeader(statusCode int) {
 	contentType := c.w.Header().Get("Content-Type")
-	isJsonOrHtml := strings.Contains(contentType, "application/json") || strings.Contains(contentType, "text/html")
-	if statusCode < 300 && isJsonOrHtml {
+	isJSONOrHTML := strings.Contains(contentType, "application/json") || strings.Contains(contentType, "text/html")
+	if statusCode < 300 && isJSONOrHTML {
 		c.w.Header().Set("Content-Encoding", "gzip")
 	}
 	c.w.WriteHeader(statusCode)
