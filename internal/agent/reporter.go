@@ -69,13 +69,18 @@ func (r *Reporter) send(metricType, name, value string) {
 	var buf bytes.Buffer
 	gz, err := gzip.NewWriterLevel(&buf, gzip.BestSpeed)
 	if err != nil {
-		log.Println("gzip.NewWriterLevel failed:", err)
+		log.Println("gzip compression failed:", err)
+		return
 	}
+
 	if _, err := gz.Write(data); err != nil {
 		log.Println("gzip write failed:", err)
 		return
 	}
-	defer gz.Close()
+	if err := gz.Close(); err != nil {
+		log.Println("gzip close failed:", err)
+		return
+	}
 
 	url := fmt.Sprintf("http://%s/update/", r.serverAddr)
 	req, err := http.NewRequest(http.MethodPost, url, &buf)
@@ -92,7 +97,11 @@ func (r *Reporter) send(metricType, name, value string) {
 		log.Println("send metric:", err)
 		return
 	}
-	defer resp.Body.Close()
+
+	if err := resp.Body.Close(); err != nil {
+		log.Println("close response body:", err)
+		return
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("bad status %d for %s/%s\n", resp.StatusCode, metricType, name)

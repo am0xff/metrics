@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/am0xff/metrics/internal/logger"
+	"github.com/am0xff/metrics/internal/middleware"
 	"github.com/am0xff/metrics/internal/router"
 	"github.com/am0xff/metrics/internal/storage"
 	"github.com/caarlos0/env/v6"
@@ -32,7 +33,7 @@ func Run() error {
 	r := router.SetupRoutes(s)
 
 	handler := logger.WithLogger(r)
-	//handler = middleware.GzipMiddleware(handler)
+	handler = middleware.GzipMiddleware(handler)
 
 	fmt.Println("Running server on", config.ServerAddr)
 	return http.ListenAndServe(config.ServerAddr, handler)
