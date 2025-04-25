@@ -1,32 +1,25 @@
 package server
 
 import (
-	"flag"
 	"fmt"
 	"github.com/am0xff/metrics/internal/logger"
 	"github.com/am0xff/metrics/internal/middleware"
 	"github.com/am0xff/metrics/internal/router"
 	"github.com/am0xff/metrics/internal/storage"
-	"github.com/caarlos0/env/v6"
+	"log"
 	"net/http"
 )
 
 func Run() error {
-	var config Config
-
-	if err := env.Parse(&config); err != nil {
-		return err
+	// Read config
+	cfg, err := LoadConfig()
+	if err != nil {
+		log.Fatalf("load config: %v", err)
 	}
 
+	// Init logger
 	if err := logger.Initialize(); err != nil {
 		return err
-	}
-
-	serverAddr := flag.String("a", config.ServerAddr, "HTTP сервер адрес")
-	flag.Parse()
-
-	config = Config{
-		ServerAddr: *serverAddr,
 	}
 
 	s := storage.NewMemStorage()
@@ -35,6 +28,6 @@ func Run() error {
 	handler := logger.WithLogger(r)
 	handler = middleware.GzipMiddleware(handler)
 
-	fmt.Println("Running server on", config.ServerAddr)
-	return http.ListenAndServe(config.ServerAddr, handler)
+	fmt.Println("Running server on", cfg.ServerAddr)
+	return http.ListenAndServe(cfg.ServerAddr, handler)
 }
