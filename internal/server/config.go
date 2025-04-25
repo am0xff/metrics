@@ -7,7 +7,7 @@ import (
 
 type Config struct {
 	ServerAddr      string `env:"ADDRESS" envDefault:"localhost:8080"`
-	StoreInterval   int    `env:"STORE_INTERVAL" envDefault:"10"`
+	StoreInterval   int    `env:"STORE_INTERVAL" envDefault:"300"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"storage_file"`
 	Restore         bool   `env:"RESTORE" envDefault:"false"`
 }

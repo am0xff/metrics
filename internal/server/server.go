@@ -8,6 +8,7 @@ import (
 	"github.com/am0xff/metrics/internal/storage"
 	"log"
 	"net/http"
+	"time"
 )
 
 func Run() error {
@@ -23,10 +24,26 @@ func Run() error {
 	}
 
 	s := storage.NewMemStorage()
+
+	if cfg.Restore {
+		if err := s.Load(cfg.FileStoragePath); err != nil {
+			return err
+		}
+	}
+
 	r := router.SetupRoutes(s)
 
 	handler := logger.WithLogger(r)
 	handler = middleware.GzipMiddleware(handler)
+
+	go func() {
+		for {
+			if err := s.Save(cfg.FileStoragePath); err != nil {
+				log.Print(err)
+			}
+			time.Sleep(time.Duration(cfg.StoreInterval) * time.Second)
+		}
+	}()
 
 	fmt.Println("Running server on", cfg.ServerAddr)
 	return http.ListenAndServe(cfg.ServerAddr, handler)
