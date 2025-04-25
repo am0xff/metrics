@@ -225,7 +225,7 @@ func (h *Handler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 	html.WriteString("</ul>")
 
 	w.Header().Set("Content-Type", "text/html")
-	w.Header().Set("Accept-Encoding", "gzip")
+	w.WriteHeader(http.StatusOK)
 
 	if _, err := io.WriteString(w, html.String()); err != nil {
 		http.Error(w, "failed to write response", http.StatusInternalServerError)
