@@ -85,6 +85,9 @@ func (ms *MemStorage) Save(filename string) error {
 
 func (ms *MemStorage) Load(filename string) error {
 	data, err := os.ReadFile(filename)
+	if os.IsNotExist(err) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
