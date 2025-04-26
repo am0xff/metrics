@@ -15,7 +15,7 @@ func Run() error {
 	// Read config
 	cfg, err := LoadConfig()
 	if err != nil {
-		log.Fatalf("load config: %v", err)
+		return fmt.Errorf("load config: %w", err)
 	}
 
 	// Init logger
@@ -27,7 +27,7 @@ func Run() error {
 
 	if cfg.Restore {
 		if err := s.Load(cfg.FileStoragePath); err != nil {
-			return err
+			return fmt.Errorf("load storage: %w", err)
 		}
 	}
 
