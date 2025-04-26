@@ -22,8 +22,8 @@ type MemStorage struct {
 }
 
 type DumpStorage struct {
-	Gauges   map[string]Gauge   `json:"gauges"`
-	Counters map[string]Counter `json:"counters"`
+	Gauges   map[string]Gauge   `json:"gauges,omitempty"`
+	Counters map[string]Counter `json:"counters,omitempty"`
 }
 
 func NewMemStorage() *MemStorage {

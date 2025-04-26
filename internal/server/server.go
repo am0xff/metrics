@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/am0xff/metrics/internal/logger"
 	"github.com/am0xff/metrics/internal/middleware"
 	"github.com/am0xff/metrics/internal/router"
 	"github.com/am0xff/metrics/internal/storage"
@@ -18,7 +19,7 @@ func Run() error {
 	}
 
 	// Init logger
-	if err := middleware.Initialize(); err != nil {
+	if err := logger.Initialize(); err != nil {
 		return err
 	}
 
