@@ -1,4 +1,4 @@
-package logger
+package middleware
 
 import (
 	"go.uber.org/zap"
@@ -49,7 +49,7 @@ func (r *loggingResponseWriter) WriteHeader(status int) {
 	r.responseData.status = status
 }
 
-func WithLogger(h http.Handler) http.Handler {
+func LoggerMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 

@@ -21,6 +21,11 @@ type MemStorage struct {
 	Counters *Storage[Counter]
 }
 
+type DumpStorage struct {
+	Gauges   map[string]Gauge   `json:"gauges"`
+	Counters map[string]Counter `json:"counters"`
+}
+
 func NewMemStorage() *MemStorage {
 	return &MemStorage{
 		Gauges:   NewStorage[Gauge](),
@@ -52,30 +57,25 @@ func (cs *CounterStorage) Keys() []string {
 	return cs.storage.Keys()
 }
 
+func (ms *MemStorage) MarshalJSON() ([]byte, error) {
+	gauges := make(map[string]Gauge)
+	for _, k := range ms.Gauges.Keys() {
+		if v, ok := ms.Gauges.Get(k); ok {
+			gauges[k] = v
+		}
+	}
+	counters := make(map[string]Counter)
+	for _, k := range ms.Counters.Keys() {
+		if v, ok := ms.Counters.Get(k); ok {
+			counters[k] = v
+		}
+	}
+
+	return json.Marshal(DumpStorage{gauges, counters})
+}
+
 func (ms *MemStorage) Save(filename string) error {
-	// Collect data
-	gauges := make(map[string]Gauge, 0)
-	for _, key := range ms.Gauges.Keys() {
-		if v, ok := ms.Gauges.Get(key); ok {
-			gauges[key] = v
-		}
-	}
-	counters := make(map[string]Counter, 0)
-	for _, key := range ms.Counters.Keys() {
-		if v, ok := ms.Counters.Get(key); ok {
-			counters[key] = v
-		}
-	}
-
-	dump := struct {
-		Gauges   map[string]Gauge
-		Counters map[string]Counter
-	}{
-		Gauges:   gauges,
-		Counters: counters,
-	}
-
-	data, err := json.Marshal(&dump)
+	data, err := json.Marshal(ms)
 	if err != nil {
 		return err
 	}
@@ -88,8 +88,17 @@ func (ms *MemStorage) Load(filename string) error {
 	if err != nil {
 		return err
 	}
-	if err := json.Unmarshal(data, ms); err != nil {
+
+	var d DumpStorage
+	if err := json.Unmarshal(data, &d); err != nil {
 		return err
+	}
+
+	for k, v := range d.Gauges {
+		ms.Gauges.Set(k, v)
+	}
+	for k, v := range d.Counters {
+		ms.Counters.Add(k, v)
 	}
 
 	return nil

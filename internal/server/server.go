@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"github.com/am0xff/metrics/internal/logger"
 	"github.com/am0xff/metrics/internal/middleware"
 	"github.com/am0xff/metrics/internal/router"
 	"github.com/am0xff/metrics/internal/storage"
@@ -19,7 +18,7 @@ func Run() error {
 	}
 
 	// Init logger
-	if err := logger.Initialize(); err != nil {
+	if err := middleware.Initialize(); err != nil {
 		return err
 	}
 
@@ -33,17 +32,21 @@ func Run() error {
 
 	r := router.SetupRoutes(s)
 
-	handler := logger.WithLogger(r)
+	handler := middleware.LoggerMiddleware(r)
 	handler = middleware.GzipMiddleware(handler)
 
-	go func() {
-		for {
-			if err := s.Save(cfg.FileStoragePath); err != nil {
-				log.Print(err)
+	if cfg.StoreInterval != 0 {
+		go func() {
+			for {
+				if err := s.Save(cfg.FileStoragePath); err != nil {
+					log.Print(err)
+				}
+				time.Sleep(time.Duration(cfg.StoreInterval) * time.Second)
 			}
-			time.Sleep(time.Duration(cfg.StoreInterval) * time.Second)
-		}
-	}()
+		}()
+	} else {
+		handler = middleware.FileStorageMiddleware(s, cfg.FileStoragePath, handler)
+	}
 
 	fmt.Println("Running server on", cfg.ServerAddr)
 	return http.ListenAndServe(cfg.ServerAddr, handler)
