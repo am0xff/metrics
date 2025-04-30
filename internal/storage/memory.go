@@ -23,11 +23,6 @@ type MemoryStorage struct {
 	Counters *Storage[Counter]
 }
 
-type DumpStorage struct {
-	Gauges   map[string]Gauge   `json:"gauges,omitempty"`
-	Counters map[string]Counter `json:"counters,omitempty"`
-}
-
 func NewMemoryStorage() *MemoryStorage {
 	return &MemoryStorage{
 		Gauges:   NewStorage[Gauge](),

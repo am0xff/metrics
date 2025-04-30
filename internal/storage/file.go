@@ -12,6 +12,11 @@ type Config struct {
 	StoreInterval   int
 }
 
+type DumpStorage struct {
+	Gauges   map[string]Gauge   `json:"gauges,omitempty"`
+	Counters map[string]Counter `json:"counters,omitempty"`
+}
+
 type FileStorage struct {
 	ms  *MemoryStorage
 	cfg Config
