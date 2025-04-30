@@ -34,7 +34,7 @@ func NewFileStorage(cfg Config) (*FileStorage, error) {
 
 	data, err := os.ReadFile(cfg.FileStoragePath)
 	if os.IsNotExist(err) {
-		return fs, err
+		return fs, nil
 	}
 	if err != nil {
 		return nil, err
