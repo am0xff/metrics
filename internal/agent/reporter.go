@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/am0xff/metrics/internal/models"
+	"github.com/am0xff/metrics/internal/storage"
 	"log"
 	"net/http"
 	"strconv"
@@ -27,28 +28,28 @@ func NewReporter(serverAddr string) *Reporter {
 
 func (r *Reporter) Report(gauges map[string]float64, counters map[string]int64) {
 	for name, v := range gauges {
-		r.send("gauge", name, strconv.FormatFloat(v, 'f', -1, 64))
+		r.send(storage.MetricTypeGauge, name, strconv.FormatFloat(v, 'f', -1, 64))
 	}
 	for name, v := range counters {
-		r.send("counter", name, strconv.FormatInt(v, 10))
+		r.send(storage.MetricTypeCounter, name, strconv.FormatInt(v, 10))
 	}
 }
 
-func (r *Reporter) send(metricType, name, value string) {
+func (r *Reporter) send(metricType storage.MetricType, name, value string) {
 	m := models.Metrics{
 		ID:    name,
 		MType: metricType,
 	}
 
 	switch metricType {
-	case "gauge":
+	case storage.MetricTypeGauge:
 		v, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			log.Println("invalid gauge value:", err)
 			return
 		}
 		m.Value = &v
-	case "counter":
+	case storage.MetricTypeCounter:
 		d, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			log.Println("invalid counter value:", err)

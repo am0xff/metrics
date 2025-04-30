@@ -10,7 +10,7 @@ import (
 )
 
 func TestGetMetric(t *testing.T) {
-	s := storage.NewMemStorage()
+	s := storage.NewMemoryStorage()
 	handler := NewHandler(s)
 
 	s.Gauges.Set("metric_of_gauge", 1)
@@ -102,7 +102,7 @@ func TestGetMetric(t *testing.T) {
 }
 
 func TestUpdateMetric(t *testing.T) {
-	s := storage.NewMemStorage()
+	s := storage.NewMemoryStorage()
 	handler := NewHandler(s)
 
 	h := http.HandlerFunc(handler.POSTUpdateMetric)

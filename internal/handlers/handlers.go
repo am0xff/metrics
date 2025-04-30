@@ -12,12 +12,37 @@ import (
 	"strings"
 )
 
-type Handler struct {
-	storage *storage.MemStorage
+type GaugesProvider interface {
+	GetGauge(key string) (storage.Gauge, bool)
+	KeysGauge() []string
 }
 
-func NewHandler(storage *storage.MemStorage) *Handler {
-	return &Handler{storage: storage}
+type CountersProvider interface {
+	GetCounter(key string) (storage.Counter, bool)
+	KeysCounter() []string
+}
+
+type GaugesSetter interface {
+	SetGauge(key string, value storage.Gauge)
+}
+
+type CountersSetter interface {
+	SetCounter(key string, value storage.Counter)
+}
+
+type StorageProvider interface {
+	GaugesProvider
+	CountersProvider
+	GaugesSetter
+	CountersSetter
+}
+
+type Handler struct {
+	storageProvider StorageProvider
+}
+
+func NewHandler(sp StorageProvider) *Handler {
+	return &Handler{storageProvider: sp}
 }
 
 func (h *Handler) POSTGetMetric(w http.ResponseWriter, r *http.Request) {
@@ -41,8 +66,8 @@ func (h *Handler) POSTGetMetric(w http.ResponseWriter, r *http.Request) {
 	var resp models.Metrics
 
 	switch req.MType {
-	case "gauge":
-		v, ok := h.storage.Gauges.Get(req.ID)
+	case storage.MetricTypeGauge:
+		v, ok := h.storageProvider.GetGauge(req.ID)
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -54,8 +79,8 @@ func (h *Handler) POSTGetMetric(w http.ResponseWriter, r *http.Request) {
 			MType: req.MType,
 			Value: &value,
 		}
-	case "counter":
-		v, ok := h.storage.Counters.Get(req.ID)
+	case storage.MetricTypeCounter:
+		v, ok := h.storageProvider.GetCounter(req.ID)
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -102,28 +127,28 @@ func (h *Handler) POSTUpdateMetric(w http.ResponseWriter, r *http.Request) {
 	var resp models.Metrics
 
 	switch req.MType {
-	case "gauge":
+	case storage.MetricTypeGauge:
 		if req.Value == nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		newValue := storage.Gauge(*req.Value)
-		h.storage.Gauges.Set(req.ID, newValue)
+		h.storageProvider.SetGauge(req.ID, newValue)
 
 		resp = models.Metrics{
 			ID:    req.ID,
 			MType: req.MType,
 			Value: req.Value,
 		}
-	case "counter":
+	case storage.MetricTypeCounter:
 		if req.Delta == nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		newValue := storage.Counter(*req.Delta)
-		h.storage.Counters.Add(req.ID, newValue)
+		h.storageProvider.SetCounter(req.ID, newValue)
 
 		resp = models.Metrics{
 			ID:    req.ID,
@@ -148,16 +173,16 @@ func (h *Handler) GETGetMetric(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "type")
 	name := chi.URLParam(r, "name")
 
-	switch metricType {
-	case "gauge":
-		v, ok := h.storage.Gauges.Get(name)
+	switch storage.MetricType(metricType) {
+	case storage.MetricTypeGauge:
+		v, ok := h.storageProvider.GetGauge(name)
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		_, _ = io.WriteString(w, strconv.FormatFloat(float64(v), 'f', -1, 64))
-	case "counter":
-		v, ok := h.storage.Counters.Get(name)
+	case storage.MetricTypeCounter:
+		v, ok := h.storageProvider.GetCounter(name)
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -181,21 +206,21 @@ func (h *Handler) GETUpdateMetric(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch metricType {
-	case "gauge":
+	switch storage.MetricType(metricType) {
+	case storage.MetricTypeGauge:
 		value, err := strconv.ParseFloat(valueStr, 64)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		h.storage.Gauges.Set(name, storage.Gauge(value))
-	case "counter":
+		h.storageProvider.SetGauge(name, storage.Gauge(value))
+	case storage.MetricTypeCounter:
 		value, err := strconv.ParseInt(valueStr, 10, 64)
 		if err != nil {
 			http.Error(w, "Invalid counter value", http.StatusBadRequest)
 			return
 		}
-		h.storage.Counters.Add(name, storage.Counter(value))
+		h.storageProvider.SetCounter(name, storage.Counter(value))
 	default:
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -214,12 +239,12 @@ func (h *Handler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 
 	html.WriteString("<html><head><title>Metrics</title></head><body>")
 	html.WriteString("<ul>")
-	for _, k := range h.storage.Gauges.Keys() {
-		v, _ := h.storage.Gauges.Get(k)
+	for _, k := range h.storageProvider.KeysGauge() {
+		v, _ := h.storageProvider.GetGauge(k)
 		html.WriteString(fmt.Sprintf("<li>%s: %v</li>", k, v))
 	}
-	for _, k := range h.storage.Counters.Keys() {
-		v, _ := h.storage.Counters.Get(k)
+	for _, k := range h.storageProvider.KeysCounter() {
+		v, _ := h.storageProvider.GetCounter(k)
 		html.WriteString(fmt.Sprintf("<li>%s: %v</li>", k, v))
 	}
 	html.WriteString("</ul>")

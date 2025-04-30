@@ -23,15 +23,19 @@ func Run() error {
 		return err
 	}
 
-	s := storage.NewMemStorage()
+	ms := storage.NewMemoryStorage()
+	fs, err := storage.NewFileStorage(storage.Config{
+		FileStoragePath: cfg.FileStoragePath,
+		Restore:         cfg.Restore,
+		StoreInterval:   cfg.StoreInterval,
+	})
 
-	if cfg.Restore {
-		if err := s.Load(cfg.FileStoragePath); err != nil {
-			return fmt.Errorf("load storage: %w", err)
-		}
+	if err != nil {
+		return fmt.Errorf("load storage: %w", err)
 	}
 
-	r := router.SetupRoutes(s)
+	r := router.SetupRoutes(ms)
+	r = router.SetupRoutes(fs)
 
 	handler := middleware.LoggerMiddleware(r)
 	handler = middleware.GzipMiddleware(handler)
@@ -39,14 +43,12 @@ func Run() error {
 	if cfg.StoreInterval != 0 {
 		go func() {
 			for {
-				if err := s.Save(cfg.FileStoragePath); err != nil {
-					log.Print(err)
+				if err := fs.Save(); err != nil {
+					log.Printf("Save storage to the file: %v", err)
 				}
 				time.Sleep(time.Duration(cfg.StoreInterval) * time.Second)
 			}
 		}()
-	} else {
-		handler = middleware.FileStorageMiddleware(s, cfg.FileStoragePath, handler)
 	}
 
 	fmt.Println("Running server on", cfg.ServerAddr)
