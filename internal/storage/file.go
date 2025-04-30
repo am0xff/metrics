@@ -102,7 +102,7 @@ func (fs *FileStorage) MarshalJSON() ([]byte, error) {
 }
 
 func (fs *FileStorage) Save() error {
-	data, err := json.Marshal(fs.ms)
+	data, err := json.Marshal(fs)
 	if err != nil {
 		return err
 	}

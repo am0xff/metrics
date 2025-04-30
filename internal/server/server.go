@@ -23,7 +23,6 @@ func Run() error {
 		return err
 	}
 
-	ms := storage.NewMemoryStorage()
 	fs, err := storage.NewFileStorage(storage.Config{
 		FileStoragePath: cfg.FileStoragePath,
 		Restore:         cfg.Restore,
@@ -34,8 +33,7 @@ func Run() error {
 		return fmt.Errorf("load storage: %w", err)
 	}
 
-	r := router.SetupRoutes(ms)
-	r = router.SetupRoutes(fs)
+	r := router.SetupRoutes(fs)
 
 	handler := middleware.LoggerMiddleware(r)
 	handler = middleware.GzipMiddleware(handler)
