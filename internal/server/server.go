@@ -1,42 +1,54 @@
 package server
 
 import (
-	"flag"
 	"fmt"
+	"github.com/am0xff/metrics/internal/logger"
+	"github.com/am0xff/metrics/internal/middleware"
+	"github.com/am0xff/metrics/internal/router"
 	"github.com/am0xff/metrics/internal/storage"
-	"github.com/caarlos0/env/v6"
 	"log"
 	"net/http"
+	"time"
 )
 
-type Server struct {
-	Storage *storage.MemStorage
-}
-
-func NewServer(storage *storage.MemStorage) *Server {
-	return &Server{Storage: storage}
-}
-
-func Run() {
-	var config Config
-
-	if err := env.Parse(&config); err != nil {
-		log.Fatalf("Parse env: %v", err)
+func Run() error {
+	// Read config
+	cfg, err := LoadConfig()
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
 	}
 
-	serverAddr := flag.String("a", config.ServerAddr, "HTTP сервер адрес")
-	flag.Parse()
-
-	config = Config{
-		ServerAddr: *serverAddr,
+	// Init logger
+	if err := logger.Initialize(); err != nil {
+		return err
 	}
 
-	store := storage.NewMemStorage()
-	srv := NewServer(store)
-	router := SetupRoutes(srv)
+	fs, err := storage.NewFileStorage(storage.Config{
+		FileStoragePath: cfg.FileStoragePath,
+		Restore:         cfg.Restore,
+		StoreInterval:   cfg.StoreInterval,
+	})
 
-	fmt.Println("Running server on", config.ServerAddr)
-	if err := http.ListenAndServe(config.ServerAddr, router); err != nil {
-		log.Fatal(err)
+	if err != nil {
+		return fmt.Errorf("load storage: %w", err)
 	}
+
+	r := router.SetupRoutes(fs)
+
+	handler := middleware.LoggerMiddleware(r)
+	handler = middleware.GzipMiddleware(handler)
+
+	if cfg.StoreInterval != 0 {
+		go func() {
+			for {
+				if err := fs.Save(); err != nil {
+					log.Printf("Save storage to the file: %v", err)
+				}
+				time.Sleep(time.Duration(cfg.StoreInterval) * time.Second)
+			}
+		}()
+	}
+
+	fmt.Println("Running server on", cfg.ServerAddr)
+	return http.ListenAndServe(cfg.ServerAddr, handler)
 }

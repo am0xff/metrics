@@ -1,0 +1,259 @@
+package handlers
+
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/am0xff/metrics/internal/models"
+	"github.com/am0xff/metrics/internal/storage"
+	"github.com/go-chi/chi/v5"
+	"io"
+	"net/http"
+	"strconv"
+	"strings"
+)
+
+type GaugesProvider interface {
+	GetGauge(key string) (storage.Gauge, bool)
+	KeysGauge() []string
+}
+
+type CountersProvider interface {
+	GetCounter(key string) (storage.Counter, bool)
+	KeysCounter() []string
+}
+
+type GaugesSetter interface {
+	SetGauge(key string, value storage.Gauge)
+}
+
+type CountersSetter interface {
+	SetCounter(key string, value storage.Counter)
+}
+
+type StorageProvider interface {
+	GaugesProvider
+	CountersProvider
+	GaugesSetter
+	CountersSetter
+}
+
+type Handler struct {
+	storageProvider StorageProvider
+}
+
+func NewHandler(sp StorageProvider) *Handler {
+	return &Handler{storageProvider: sp}
+}
+
+func (h *Handler) POSTGetMetric(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req models.Metrics
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if req.MType == "" || req.ID == "" {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	var resp models.Metrics
+
+	switch req.MType {
+	case storage.MetricTypeGauge:
+		v, ok := h.storageProvider.GetGauge(req.ID)
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		value := float64(v)
+		resp = models.Metrics{
+			ID:    req.ID,
+			MType: req.MType,
+			Value: &value,
+		}
+	case storage.MetricTypeCounter:
+		v, ok := h.storageProvider.GetCounter(req.ID)
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		value := int64(v)
+		resp = models.Metrics{
+			ID:    req.ID,
+			MType: req.MType,
+			Delta: &value,
+		}
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(resp); err != nil {
+		return
+	}
+}
+
+func (h *Handler) POSTUpdateMetric(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req models.Metrics
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if req.MType == "" || req.ID == "" {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	var resp models.Metrics
+
+	switch req.MType {
+	case storage.MetricTypeGauge:
+		if req.Value == nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		newValue := storage.Gauge(*req.Value)
+		h.storageProvider.SetGauge(req.ID, newValue)
+
+		resp = models.Metrics{
+			ID:    req.ID,
+			MType: req.MType,
+			Value: req.Value,
+		}
+	case storage.MetricTypeCounter:
+		if req.Delta == nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		newValue := storage.Counter(*req.Delta)
+		h.storageProvider.SetCounter(req.ID, newValue)
+
+		resp = models.Metrics{
+			ID:    req.ID,
+			MType: req.MType,
+			Delta: req.Delta,
+		}
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(resp); err != nil {
+		return
+	}
+}
+
+func (h *Handler) GETGetMetric(w http.ResponseWriter, r *http.Request) {
+	metricType := chi.URLParam(r, "type")
+	name := chi.URLParam(r, "name")
+
+	switch storage.MetricType(metricType) {
+	case storage.MetricTypeGauge:
+		v, ok := h.storageProvider.GetGauge(name)
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		_, _ = io.WriteString(w, strconv.FormatFloat(float64(v), 'f', -1, 64))
+	case storage.MetricTypeCounter:
+		v, ok := h.storageProvider.GetCounter(name)
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		_, _ = io.WriteString(w, strconv.FormatInt(int64(v), 10))
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) GETUpdateMetric(w http.ResponseWriter, r *http.Request) {
+	metricType := chi.URLParam(r, "type")
+	name := chi.URLParam(r, "name")
+	valueStr := chi.URLParam(r, "value")
+
+	if name == "" {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	switch storage.MetricType(metricType) {
+	case storage.MetricTypeGauge:
+		value, err := strconv.ParseFloat(valueStr, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		h.storageProvider.SetGauge(name, storage.Gauge(value))
+	case storage.MetricTypeCounter:
+		value, err := strconv.ParseInt(valueStr, 10, 64)
+		if err != nil {
+			http.Error(w, "Invalid counter value", http.StatusBadRequest)
+			return
+		}
+		h.storageProvider.SetCounter(name, storage.Counter(value))
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) GetMetrics(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	var html strings.Builder
+
+	html.WriteString("<html><head><title>Metrics</title></head><body>")
+	html.WriteString("<ul>")
+	for _, k := range h.storageProvider.KeysGauge() {
+		v, _ := h.storageProvider.GetGauge(k)
+		html.WriteString(fmt.Sprintf("<li>%s: %v</li>", k, v))
+	}
+	for _, k := range h.storageProvider.KeysCounter() {
+		v, _ := h.storageProvider.GetCounter(k)
+		html.WriteString(fmt.Sprintf("<li>%s: %v</li>", k, v))
+	}
+	html.WriteString("</ul>")
+
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+
+	if _, err := io.WriteString(w, html.String()); err != nil {
+		http.Error(w, "failed to write response", http.StatusInternalServerError)
+		return
+	}
+}
