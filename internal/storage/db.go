@@ -2,7 +2,6 @@ package storage
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 )
 
@@ -11,7 +10,7 @@ type DBStorage struct {
 	db *sql.DB
 }
 
-func NewDBStorage(db *sql.DB) *DBStorage {
+func NewDBStorage(db *sql.DB) (*DBStorage, error) {
 	// Создаем таблицы, если их нет
 	_, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS gauges (
@@ -20,7 +19,7 @@ func NewDBStorage(db *sql.DB) *DBStorage {
 		);
 	`)
 	if err != nil {
-		panic(fmt.Sprintf("failed to create gauges table: %v", err))
+		return nil, err
 	}
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS counters (
@@ -29,25 +28,24 @@ func NewDBStorage(db *sql.DB) *DBStorage {
 		);
 	`)
 	if err != nil {
-		panic(fmt.Sprintf("failed to create counters table: %v", err))
+		return nil, err
 	}
 
 	return &DBStorage{
 		ms: NewMemoryStorage(),
 		db: db,
-	}
+	}, nil
 }
 
 func (d *DBStorage) SetGauge(key string, value Gauge) {
-	// Сразу обновляем память
 	d.ms.SetGauge(key, value)
 
-	// А затем UPSERT в БД
 	_, err := d.db.Exec(`
 		INSERT INTO gauges (key, value)
 		VALUES ($1, $2)
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
 	`, key, float64(value))
+
 	if err != nil {
 		log.Printf("DBStorage.SetGauge exec error: %v", err)
 	}
@@ -58,9 +56,7 @@ func (d *DBStorage) GetGauge(key string) (Gauge, bool) {
 	err := d.db.QueryRow(`
 		SELECT value FROM gauges WHERE key = $1
 	`, key).Scan(&v)
-	if err == sql.ErrNoRows {
-		return 0, false
-	}
+
 	if err != nil {
 		log.Printf("DBStorage.GetGauge query error: %v", err)
 		// fallback to memory
@@ -97,6 +93,7 @@ func (d *DBStorage) SetCounter(key string, value Counter) {
 		VALUES ($1, $2)
 		ON CONFLICT (key) DO UPDATE SET value = counters.value + EXCLUDED.value
 	`, key, int64(value))
+
 	if err != nil {
 		log.Printf("DBStorage.SetCounter exec error: %v", err)
 	}
@@ -107,9 +104,7 @@ func (d *DBStorage) GetCounter(key string) (Counter, bool) {
 	err := d.db.QueryRow(`
 		SELECT value FROM counters WHERE key = $1
 	`, key).Scan(&v)
-	if err == sql.ErrNoRows {
-		return 0, false
-	}
+
 	if err != nil {
 		log.Printf("DBStorage.GetCounter query error: %v", err)
 		return d.ms.GetCounter(key)
