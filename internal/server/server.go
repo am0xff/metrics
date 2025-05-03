@@ -31,21 +31,14 @@ func Run() error {
 	}
 
 	var s handlers.StorageProvider
+
 	ms := storage.NewMemoryStorage()
-
-	ds, err := storage.NewDBStorage(db)
-	if err != nil {
-		return fmt.Errorf("connect db: %w", err)
-	}
-
-	fs, err := storage.NewFileStorage(storage.Config{
+	ds, _ := storage.NewDBStorage(db)
+	fs, _ := storage.NewFileStorage(storage.Config{
 		FileStoragePath: cfg.FileStoragePath,
 		Restore:         cfg.Restore,
 		StoreInterval:   cfg.StoreInterval,
 	})
-	if err != nil {
-		return fmt.Errorf("load storage: %w", err)
-	}
 
 	if cfg.DatabaseDSN != "" {
 		s = ds
