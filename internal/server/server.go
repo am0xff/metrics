@@ -54,7 +54,7 @@ func Run() error {
 	} else {
 		s = ms
 	}
-	
+
 	r := router.SetupRoutes(s, db)
 
 	handler := middleware.LoggerMiddleware(r)

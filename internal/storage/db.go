@@ -82,6 +82,12 @@ func (d *DBStorage) KeysGauge() []string {
 		}
 		keys = append(keys, k)
 	}
+
+	if err := rows.Err(); err != nil {
+		log.Printf("DBStorage.KeysGauge rows iteration error: %v", err)
+		return d.ms.KeysGauge()
+	}
+
 	return keys
 }
 
