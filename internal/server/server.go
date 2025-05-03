@@ -1,11 +1,14 @@
 package server
 
 import (
+	"database/sql"
 	"fmt"
+	"github.com/am0xff/metrics/internal/handlers"
 	"github.com/am0xff/metrics/internal/logger"
 	"github.com/am0xff/metrics/internal/middleware"
 	"github.com/am0xff/metrics/internal/router"
 	"github.com/am0xff/metrics/internal/storage"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"log"
 	"net/http"
 	"time"
@@ -18,22 +21,34 @@ func Run() error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
+	// Connect to DB
+	db, _ := sql.Open("pgx", cfg.DatabaseDSN)
+	defer db.Close()
+
 	// Init logger
 	if err := logger.Initialize(); err != nil {
-		return err
+		return fmt.Errorf("initialize logger: %w", err)
 	}
 
-	fs, err := storage.NewFileStorage(storage.Config{
+	var s handlers.StorageProvider
+
+	ms := storage.NewMemoryStorage()
+	ds, _ := storage.NewDBStorage(db)
+	fs, _ := storage.NewFileStorage(storage.Config{
 		FileStoragePath: cfg.FileStoragePath,
 		Restore:         cfg.Restore,
 		StoreInterval:   cfg.StoreInterval,
 	})
 
-	if err != nil {
-		return fmt.Errorf("load storage: %w", err)
+	if cfg.DatabaseDSN != "" {
+		s = ds
+	} else if cfg.FileStoragePath != "" {
+		s = fs
+	} else {
+		s = ms
 	}
 
-	r := router.SetupRoutes(fs)
+	r := router.SetupRoutes(s, db)
 
 	handler := middleware.LoggerMiddleware(r)
 	handler = middleware.GzipMiddleware(handler)

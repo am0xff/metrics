@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/am0xff/metrics/internal/models"
@@ -39,10 +40,11 @@ type StorageProvider interface {
 
 type Handler struct {
 	storageProvider StorageProvider
+	db              *sql.DB
 }
 
-func NewHandler(sp StorageProvider) *Handler {
-	return &Handler{storageProvider: sp}
+func NewHandler(sp StorageProvider, db *sql.DB) *Handler {
+	return &Handler{storageProvider: sp, db: db}
 }
 
 func (h *Handler) POSTGetMetric(w http.ResponseWriter, r *http.Request) {
@@ -256,4 +258,13 @@ func (h *Handler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to write response", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
+	if err := h.db.PingContext(r.Context()); err != nil {
+		http.Error(w, "database ping failed", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
