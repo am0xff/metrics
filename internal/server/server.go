@@ -3,6 +3,7 @@ package server
 import (
 	"database/sql"
 	"fmt"
+	"github.com/am0xff/metrics/internal/handlers"
 	"github.com/am0xff/metrics/internal/logger"
 	"github.com/am0xff/metrics/internal/middleware"
 	"github.com/am0xff/metrics/internal/router"
@@ -29,17 +30,28 @@ func Run() error {
 		return fmt.Errorf("initialize logger: %w", err)
 	}
 
+	var s handlers.StorageProvider
+	ms := storage.NewMemoryStorage()
+	ds := storage.NewDBStorage(db)
 	fs, err := storage.NewFileStorage(storage.Config{
 		FileStoragePath: cfg.FileStoragePath,
 		Restore:         cfg.Restore,
 		StoreInterval:   cfg.StoreInterval,
 	})
 
+	if cfg.DatabaseDSN != "" {
+		s = ds
+	} else if cfg.FileStoragePath != "" {
+		s = fs
+	} else {
+		s = ms
+	}
+
 	if err != nil {
 		return fmt.Errorf("load storage: %w", err)
 	}
 
-	r := router.SetupRoutes(fs, db)
+	r := router.SetupRoutes(s, db)
 
 	handler := middleware.LoggerMiddleware(r)
 	handler = middleware.GzipMiddleware(handler)
