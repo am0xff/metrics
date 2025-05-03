@@ -1,11 +1,13 @@
 package server
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/am0xff/metrics/internal/logger"
 	"github.com/am0xff/metrics/internal/middleware"
 	"github.com/am0xff/metrics/internal/router"
 	"github.com/am0xff/metrics/internal/storage"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"log"
 	"net/http"
 	"time"
@@ -18,9 +20,13 @@ func Run() error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
+	// Connect to DB
+	db, _ := sql.Open("pgx", cfg.DatabaseDSN)
+	defer db.Close()
+
 	// Init logger
 	if err := logger.Initialize(); err != nil {
-		return err
+		return fmt.Errorf("initialize logger: %w", err)
 	}
 
 	fs, err := storage.NewFileStorage(storage.Config{
@@ -33,7 +39,7 @@ func Run() error {
 		return fmt.Errorf("load storage: %w", err)
 	}
 
-	r := router.SetupRoutes(fs)
+	r := router.SetupRoutes(fs, db)
 
 	handler := middleware.LoggerMiddleware(r)
 	handler = middleware.GzipMiddleware(handler)
