@@ -164,7 +164,7 @@ func (r *Reporter) sendBatch(gauges map[string]float64, counters map[string]int6
 		return
 	}
 
-	url := fmt.Sprintf("http://%s/update/", r.serverAddr)
+	url := fmt.Sprintf("http://%s/updates/", r.serverAddr)
 	req, err := http.NewRequest(http.MethodPost, url, &buf)
 	if err != nil {
 		log.Println("create request:", err)
