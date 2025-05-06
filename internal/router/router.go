@@ -16,6 +16,7 @@ func SetupRoutes(sp handlers.StorageProvider, db *sql.DB) http.Handler {
 	r.Get("/ping", handler.Ping)
 	r.Post("/value/", handler.POSTGetMetric)
 	r.Post("/update/", handler.POSTUpdateMetric)
+	r.Post("/updates/", handler.POSTUpdatesMetrics)
 	r.Get("/value/{type}/{name}", handler.GETGetMetric)
 	r.Post("/update/{type}/{name}/{value}", handler.GETUpdateMetric)
 	return r

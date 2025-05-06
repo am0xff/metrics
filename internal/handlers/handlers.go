@@ -171,6 +171,56 @@ func (h *Handler) POSTUpdateMetric(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *Handler) POSTUpdatesMetrics(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	var reqs []models.Metrics
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&reqs); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if len(reqs) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	for _, req := range reqs {
+		if req.MType == "" || req.ID == "" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		switch req.MType {
+		case storage.MetricTypeGauge:
+			if req.Value == nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			newValue := storage.Gauge(*req.Value)
+			h.storageProvider.SetGauge(req.ID, newValue)
+		case storage.MetricTypeCounter:
+			if req.Delta == nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			newValue := storage.Counter(*req.Delta)
+			h.storageProvider.SetCounter(req.ID, newValue)
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func (h *Handler) GETGetMetric(w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "type")
 	name := chi.URLParam(r, "name")
