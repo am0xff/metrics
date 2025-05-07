@@ -28,10 +28,10 @@ func NewReporter(serverAddr string) *Reporter {
 
 func (r *Reporter) Report(gauges map[string]float64, counters map[string]int64) {
 	for name, v := range gauges {
-		r.send(storage.MetricTypeGaugeV2, name, strconv.FormatFloat(v, 'f', -1, 64))
+		r.send(storage.MetricTypeGauge, name, strconv.FormatFloat(v, 'f', -1, 64))
 	}
 	for name, v := range counters {
-		r.send(storage.MetricTypeCounterV2, name, strconv.FormatInt(v, 10))
+		r.send(storage.MetricTypeCounter, name, strconv.FormatInt(v, 10))
 	}
 }
 
@@ -39,21 +39,21 @@ func (r *Reporter) ReportBatch(gauges map[string]float64, counters map[string]in
 	r.sendBatch(gauges, counters)
 }
 
-func (r *Reporter) send(metricType storage.MetricTypeV2, name, value string) {
+func (r *Reporter) send(metricType storage.MetricType, name, value string) {
 	m := models.Metrics{
 		ID:    name,
 		MType: metricType,
 	}
 
 	switch metricType {
-	case storage.MetricTypeGaugeV2:
+	case storage.MetricTypeGauge:
 		v, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			log.Println("invalid gauge value:", err)
 			return
 		}
 		m.Value = &v
-	case storage.MetricTypeCounterV2:
+	case storage.MetricTypeCounter:
 		d, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			log.Println("invalid counter value:", err)
@@ -124,7 +124,7 @@ func (r *Reporter) sendBatch(gauges map[string]float64, counters map[string]int6
 		}
 		metrics = append(metrics, models.Metrics{
 			ID:    name,
-			MType: storage.MetricTypeGaugeV2,
+			MType: storage.MetricTypeGauge,
 			Value: &value,
 		})
 	}
@@ -137,7 +137,7 @@ func (r *Reporter) sendBatch(gauges map[string]float64, counters map[string]int6
 		}
 		metrics = append(metrics, models.Metrics{
 			ID:    name,
-			MType: storage.MetricTypeCounterV2,
+			MType: storage.MetricTypeCounter,
 			Delta: &delta,
 		})
 	}
