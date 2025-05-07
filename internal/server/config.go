@@ -10,6 +10,7 @@ type Config struct {
 	StoreInterval   int    `env:"STORE_INTERVAL" envDefault:"300"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"storage_file"`
 	Restore         bool   `env:"RESTORE" envDefault:"false"`
+	DatabaseDSN     string `env:"DATABASE_DSN"`
 }
 
 func LoadConfig() (Config, error) {
@@ -24,6 +25,7 @@ func LoadConfig() (Config, error) {
 	storeInterval := flag.Int("i", cfg.StoreInterval, "Пауза/Интервал между сохранениями")
 	fileStoragePath := flag.String("f", cfg.FileStoragePath, "Путь до файла, куда сохраняются текущие значения")
 	restore := flag.Bool("r", cfg.Restore, "Загружать или нет ранее сохранённые значения")
+	databaseDSN := flag.String("d", cfg.DatabaseDSN, "DNS database host")
 
 	flag.Parse()
 
@@ -31,6 +33,7 @@ func LoadConfig() (Config, error) {
 	cfg.StoreInterval = *storeInterval
 	cfg.FileStoragePath = *fileStoragePath
 	cfg.Restore = *restore
+	cfg.DatabaseDSN = *databaseDSN
 
 	return cfg, nil
 }
