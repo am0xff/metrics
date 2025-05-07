@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	memstorage "github.com/am0xff/metrics/internal/storagev2/memory"
+	memstorage "github.com/am0xff/metrics/internal/storage/memory"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"net/http"

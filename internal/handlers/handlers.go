@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/am0xff/metrics/internal/models"
-	storage "github.com/am0xff/metrics/internal/storagev2"
+	storage "github.com/am0xff/metrics/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"

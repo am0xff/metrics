@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/am0xff/metrics/internal/models"
-	storage "github.com/am0xff/metrics/internal/storagev2"
+	storage "github.com/am0xff/metrics/internal/storage"
 	"log"
 	"net/http"
 	"strconv"

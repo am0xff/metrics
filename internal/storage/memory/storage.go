@@ -1,7 +1,7 @@
 package memory
 
 import (
-	storage "github.com/am0xff/metrics/internal/storagev2"
+	storage "github.com/am0xff/metrics/internal/storage"
 )
 
 type MemStorage struct {

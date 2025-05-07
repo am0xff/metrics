@@ -1,7 +1,9 @@
-package storage
+package file
 
 import (
 	"encoding/json"
+	storage "github.com/am0xff/metrics/internal/storage"
+	memstorage "github.com/am0xff/metrics/internal/storage/memory"
 	"log"
 	"os"
 )
@@ -13,19 +15,19 @@ type Config struct {
 }
 
 type DumpStorage struct {
-	Gauges   map[string]Gauge   `json:"gauges,omitempty"`
-	Counters map[string]Counter `json:"counters,omitempty"`
+	Gauges   map[string]storage.Gauge   `json:"gauges,omitempty"`
+	Counters map[string]storage.Counter `json:"counters,omitempty"`
 }
 
 type FileStorage struct {
-	ms  *MemoryStorage
+	ms  *memstorage.MemStorage
 	cfg Config
 }
 
-func NewFileStorage(cfg Config) (*FileStorage, error) {
+func NewStorage(cfg Config) (*FileStorage, error) {
 	fs := &FileStorage{
 		cfg: cfg,
-		ms:  NewMemoryStorage(),
+		ms:  memstorage.NewStorage(),
 	}
 
 	if !cfg.Restore {
@@ -55,7 +57,7 @@ func NewFileStorage(cfg Config) (*FileStorage, error) {
 	return fs, nil
 }
 
-func (fs *FileStorage) GetGauge(key string) (Gauge, bool) {
+func (fs *FileStorage) GetGauge(key string) (storage.Gauge, bool) {
 	return fs.ms.GetGauge(key)
 }
 
@@ -63,7 +65,7 @@ func (fs *FileStorage) KeysGauge() []string {
 	return fs.ms.KeysGauge()
 }
 
-func (fs *FileStorage) GetCounter(key string) (Counter, bool) {
+func (fs *FileStorage) GetCounter(key string) (storage.Counter, bool) {
 	return fs.ms.GetCounter(key)
 }
 
@@ -71,7 +73,7 @@ func (fs *FileStorage) KeysCounter() []string {
 	return fs.ms.KeysCounter()
 }
 
-func (fs *FileStorage) SetGauge(key string, value Gauge) {
+func (fs *FileStorage) SetGauge(key string, value storage.Gauge) {
 	fs.ms.SetGauge(key, value)
 	if fs.cfg.StoreInterval == 0 {
 		if err := fs.Save(); err != nil {
@@ -80,7 +82,7 @@ func (fs *FileStorage) SetGauge(key string, value Gauge) {
 	}
 }
 
-func (fs *FileStorage) SetCounter(key string, value Counter) {
+func (fs *FileStorage) SetCounter(key string, value storage.Counter) {
 	fs.ms.SetCounter(key, value)
 	if fs.cfg.StoreInterval == 0 {
 		if err := fs.Save(); err != nil {
@@ -90,13 +92,13 @@ func (fs *FileStorage) SetCounter(key string, value Counter) {
 }
 
 func (fs *FileStorage) MarshalJSON() ([]byte, error) {
-	gauges := make(map[string]Gauge)
+	gauges := make(map[string]storage.Gauge)
 	for _, k := range fs.ms.KeysGauge() {
 		if v, ok := fs.ms.GetGauge(k); ok {
 			gauges[k] = v
 		}
 	}
-	counters := make(map[string]Counter)
+	counters := make(map[string]storage.Counter)
 	for _, k := range fs.ms.KeysCounter() {
 		if v, ok := fs.ms.GetCounter(k); ok {
 			counters[k] = v

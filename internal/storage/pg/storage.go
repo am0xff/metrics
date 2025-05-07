@@ -2,15 +2,17 @@ package storage
 
 import (
 	"database/sql"
+	storage "github.com/am0xff/metrics/internal/storage"
+	memstorage "github.com/am0xff/metrics/internal/storage/memory"
 	"log"
 )
 
 type DBStorage struct {
-	ms *MemoryStorage
+	ms *memstorage.MemStorage
 	db *sql.DB
 }
 
-func NewDBStorage(db *sql.DB) (*DBStorage, error) {
+func NewStorage(db *sql.DB) (*DBStorage, error) {
 	// Создаем таблицы, если их нет
 	_, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS gauges (
@@ -32,12 +34,12 @@ func NewDBStorage(db *sql.DB) (*DBStorage, error) {
 	}
 
 	return &DBStorage{
-		ms: NewMemoryStorage(),
+		ms: memstorage.NewStorage(),
 		db: db,
 	}, nil
 }
 
-func (d *DBStorage) SetGauge(key string, value Gauge) {
+func (d *DBStorage) SetGauge(key string, value storage.Gauge) {
 	d.ms.SetGauge(key, value)
 
 	_, err := d.db.Exec(`
@@ -51,7 +53,7 @@ func (d *DBStorage) SetGauge(key string, value Gauge) {
 	}
 }
 
-func (d *DBStorage) GetGauge(key string) (Gauge, bool) {
+func (d *DBStorage) GetGauge(key string) (storage.Gauge, bool) {
 	var v float64
 	err := d.db.QueryRow(`
 		SELECT value FROM gauges WHERE key = $1
@@ -62,7 +64,7 @@ func (d *DBStorage) GetGauge(key string) (Gauge, bool) {
 		// fallback to memory
 		return d.ms.GetGauge(key)
 	}
-	return Gauge(v), true
+	return storage.Gauge(v), true
 }
 
 func (d *DBStorage) KeysGauge() []string {
@@ -91,7 +93,7 @@ func (d *DBStorage) KeysGauge() []string {
 	return keys
 }
 
-func (d *DBStorage) SetCounter(key string, value Counter) {
+func (d *DBStorage) SetCounter(key string, value storage.Counter) {
 	d.ms.SetCounter(key, value)
 
 	_, err := d.db.Exec(`
@@ -105,7 +107,7 @@ func (d *DBStorage) SetCounter(key string, value Counter) {
 	}
 }
 
-func (d *DBStorage) GetCounter(key string) (Counter, bool) {
+func (d *DBStorage) GetCounter(key string) (storage.Counter, bool) {
 	var v int64
 	err := d.db.QueryRow(`
 		SELECT value FROM counters WHERE key = $1
@@ -115,7 +117,7 @@ func (d *DBStorage) GetCounter(key string) (Counter, bool) {
 		log.Printf("DBStorage.GetCounter query error: %v", err)
 		return d.ms.GetCounter(key)
 	}
-	return Counter(v), true
+	return storage.Counter(v), true
 }
 
 func (d *DBStorage) KeysCounter() []string {
