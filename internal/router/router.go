@@ -3,11 +3,12 @@ package router
 import (
 	"database/sql"
 	"github.com/am0xff/metrics/internal/handlers"
+	storage "github.com/am0xff/metrics/internal/storagev2"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 )
 
-func SetupRoutes(sp handlers.StorageProvider, db *sql.DB) http.Handler {
+func SetupRoutes(sp storage.StorageProvider, db *sql.DB) http.Handler {
 	r := chi.NewRouter()
 
 	handler := handlers.NewHandler(sp, db)

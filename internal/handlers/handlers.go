@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/am0xff/metrics/internal/models"
-	"github.com/am0xff/metrics/internal/storage"
+	storage "github.com/am0xff/metrics/internal/storagev2"
 	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
@@ -13,37 +13,12 @@ import (
 	"strings"
 )
 
-type GaugesProvider interface {
-	GetGauge(key string) (storage.Gauge, bool)
-	KeysGauge() []string
-}
-
-type CountersProvider interface {
-	GetCounter(key string) (storage.Counter, bool)
-	KeysCounter() []string
-}
-
-type GaugesSetter interface {
-	SetGauge(key string, value storage.Gauge)
-}
-
-type CountersSetter interface {
-	SetCounter(key string, value storage.Counter)
-}
-
-type StorageProvider interface {
-	GaugesProvider
-	CountersProvider
-	GaugesSetter
-	CountersSetter
-}
-
 type Handler struct {
-	storageProvider StorageProvider
+	storageProvider storage.StorageProvider
 	db              *sql.DB
 }
 
-func NewHandler(sp StorageProvider, db *sql.DB) *Handler {
+func NewHandler(sp storage.StorageProvider, db *sql.DB) *Handler {
 	return &Handler{storageProvider: sp, db: db}
 }
 

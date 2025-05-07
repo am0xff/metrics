@@ -3,11 +3,13 @@ package server
 import (
 	"database/sql"
 	"fmt"
-	"github.com/am0xff/metrics/internal/handlers"
 	"github.com/am0xff/metrics/internal/logger"
 	"github.com/am0xff/metrics/internal/middleware"
 	"github.com/am0xff/metrics/internal/router"
-	"github.com/am0xff/metrics/internal/storage"
+	storage "github.com/am0xff/metrics/internal/storagev2"
+	fstorage "github.com/am0xff/metrics/internal/storagev2/file"
+	memstorage "github.com/am0xff/metrics/internal/storagev2/memory"
+	pgstorage "github.com/am0xff/metrics/internal/storagev2/pg"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"log"
 	"net/http"
@@ -30,11 +32,11 @@ func Run() error {
 		return fmt.Errorf("initialize logger: %w", err)
 	}
 
-	var s handlers.StorageProvider
+	var s storage.StorageProvider
 
-	ms := storage.NewMemoryStorage()
-	ds, _ := storage.NewDBStorage(db)
-	fs, _ := storage.NewFileStorage(storage.Config{
+	ms := memstorage.NewStorage()
+	ds, _ := pgstorage.NewStorage(db)
+	fs, _ := fstorage.NewStorage(fstorage.Config{
 		FileStoragePath: cfg.FileStoragePath,
 		Restore:         cfg.Restore,
 		StoreInterval:   cfg.StoreInterval,
