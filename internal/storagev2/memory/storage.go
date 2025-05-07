@@ -29,7 +29,7 @@ func (m *MemStorage) SetGauge(key string, value storage.Gauge) {
 }
 
 func (m *MemStorage) SetCounter(key string, value storage.Counter) {
-	m.Counters.Set(key, value)
+	m.Counters.Count(key, value)
 }
 
 func (m *MemStorage) KeysGauge() []string {

@@ -19,11 +19,11 @@ type StorageProvider interface {
 	KeysCounter() []string
 }
 
-type Storage[T any] struct {
+type Storage[T interface{ Gauge | Counter }] struct {
 	data map[string]T
 }
 
-func NewStorage[T any]() *Storage[T] {
+func NewStorage[T interface{ Gauge | Counter }]() *Storage[T] {
 	return &Storage[T]{
 		data: make(map[string]T),
 	}
@@ -44,4 +44,8 @@ func (s *Storage[T]) Keys() []string {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+func (s *Storage[T]) Count(key string, value T) {
+	s.data[key] += value
 }

@@ -3,12 +3,12 @@ package storage
 import (
 	"database/sql"
 	storage "github.com/am0xff/metrics/internal/storagev2"
-	smemory "github.com/am0xff/metrics/internal/storagev2/memory"
+	memstorage "github.com/am0xff/metrics/internal/storagev2/memory"
 	"log"
 )
 
 type DBStorage struct {
-	ms *smemory.MemStorage
+	ms *memstorage.MemStorage
 	db *sql.DB
 }
 
@@ -34,7 +34,7 @@ func NewStorage(db *sql.DB) (*DBStorage, error) {
 	}
 
 	return &DBStorage{
-		ms: smemory.NewStorage(),
+		ms: memstorage.NewStorage(),
 		db: db,
 	}, nil
 }
