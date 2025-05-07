@@ -1,5 +1,9 @@
 package storage
 
+import (
+	"context"
+)
+
 type Gauge float64
 type Counter int64
 
@@ -11,12 +15,12 @@ const (
 )
 
 type StorageProvider interface {
-	GetGauge(key string) (Gauge, bool)
-	GetCounter(key string) (Counter, bool)
-	KeysGauge() []string
-	SetGauge(key string, value Gauge)
-	SetCounter(key string, value Counter)
-	KeysCounter() []string
+	GetGauge(ctx context.Context, key string) (Gauge, bool)
+	GetCounter(ctx context.Context, key string) (Counter, bool)
+	KeysGauge(ctx context.Context) []string
+	SetGauge(ctx context.Context, key string, value Gauge)
+	SetCounter(ctx context.Context, key string, value Counter)
+	KeysCounter(ctx context.Context) []string
 }
 
 type Storage[T interface{ Gauge | Counter }] struct {

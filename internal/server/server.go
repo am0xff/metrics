@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"github.com/am0xff/metrics/internal/logger"
@@ -17,6 +18,8 @@ import (
 )
 
 func Run() error {
+	ctx := context.Background()
+
 	// Read config
 	cfg, err := LoadConfig()
 	if err != nil {
@@ -35,15 +38,22 @@ func Run() error {
 	var s storage.StorageProvider
 
 	ms := memstorage.NewStorage()
-	ds, _ := pgstorage.NewStorage(db)
-	fs, _ := fstorage.NewStorage(fstorage.Config{
+	fs, _ := fstorage.NewStorage(ctx, fstorage.Config{
 		FileStoragePath: cfg.FileStoragePath,
 		Restore:         cfg.Restore,
 		StoreInterval:   cfg.StoreInterval,
 	})
 
 	if cfg.DatabaseDSN != "" {
-		s = ds
+		var ds *pgstorage.PGStorage
+		if cfg.DatabaseDSN != "" {
+			ds = pgstorage.NewStorage(db)
+			// Точка входа для создания таблиц
+			if err := ds.Bootstrap(context.Background()); err != nil {
+				return fmt.Errorf("bootstrap db storage: %w", err)
+			}
+			s = ds
+		}
 	} else if cfg.FileStoragePath != "" {
 		s = fs
 	} else {

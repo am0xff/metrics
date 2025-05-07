@@ -1,7 +1,8 @@
 package memory
 
 import (
-	storage "github.com/am0xff/metrics/internal/storage"
+	"context"
+	"github.com/am0xff/metrics/internal/storage"
 )
 
 type MemStorage struct {
@@ -16,26 +17,26 @@ func NewStorage() *MemStorage {
 	}
 }
 
-func (m *MemStorage) GetGauge(key string) (storage.Gauge, bool) {
+func (m *MemStorage) GetGauge(_ context.Context, key string) (storage.Gauge, bool) {
 	return m.Gauges.Get(key)
 }
 
-func (m *MemStorage) GetCounter(key string) (storage.Counter, bool) {
+func (m *MemStorage) GetCounter(_ context.Context, key string) (storage.Counter, bool) {
 	return m.Counters.Get(key)
 }
 
-func (m *MemStorage) SetGauge(key string, value storage.Gauge) {
+func (m *MemStorage) SetGauge(_ context.Context, key string, value storage.Gauge) {
 	m.Gauges.Set(key, value)
 }
 
-func (m *MemStorage) SetCounter(key string, value storage.Counter) {
+func (m *MemStorage) SetCounter(_ context.Context, key string, value storage.Counter) {
 	m.Counters.Count(key, value)
 }
 
-func (m *MemStorage) KeysGauge() []string {
+func (m *MemStorage) KeysGauge(_ context.Context) []string {
 	return m.Gauges.Keys()
 }
 
-func (m *MemStorage) KeysCounter() []string {
+func (m *MemStorage) KeysCounter(_ context.Context) []string {
 	return m.Counters.Keys()
 }
