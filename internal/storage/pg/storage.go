@@ -71,7 +71,7 @@ func (pgs *PGStorage) GetGauge(ctx context.Context, key string) (storage.Gauge, 
 	if err != nil {
 		log.Printf("DBStorage.GetGauge query error: %v", err)
 		// fallback to memory
-		return d.ms.GetGauge(ctx, key)
+		return pgs.ms.GetGauge(ctx, key)
 	}
 	return storage.Gauge(v), true
 }
@@ -96,7 +96,7 @@ func (pgs *PGStorage) KeysGauge(ctx context.Context) []string {
 
 	if err := rows.Err(); err != nil {
 		log.Printf("DBStorage.KeysGauge rows iteration error: %v", err)
-		return d.ms.KeysGauge(ctx)
+		return pgs.ms.KeysGauge(ctx)
 	}
 
 	return keys
