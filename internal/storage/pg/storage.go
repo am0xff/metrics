@@ -62,9 +62,9 @@ func (pgs *PGStorage) SetGauge(ctx context.Context, key string, value storage.Ga
 	}
 }
 
-func (d *PGStorage) GetGauge(ctx context.Context, key string) (storage.Gauge, bool) {
+func (pgs *PGStorage) GetGauge(ctx context.Context, key string) (storage.Gauge, bool) {
 	var v float64
-	err := d.db.QueryRowContext(ctx, `
+	err := pgs.db.QueryRowContext(ctx, `
 		SELECT value FROM gauges WHERE key = $1
 	`, key).Scan(&v)
 
@@ -76,11 +76,11 @@ func (d *PGStorage) GetGauge(ctx context.Context, key string) (storage.Gauge, bo
 	return storage.Gauge(v), true
 }
 
-func (d *PGStorage) KeysGauge(ctx context.Context) []string {
-	rows, err := d.db.QueryContext(ctx, `SELECT key FROM gauges`)
+func (pgs *PGStorage) KeysGauge(ctx context.Context) []string {
+	rows, err := pgs.db.QueryContext(ctx, `SELECT key FROM gauges`)
 	if err != nil {
 		log.Printf("DBStorage.KeysGauge query error: %v", err)
-		return d.ms.KeysGauge(ctx)
+		return pgs.ms.KeysGauge(ctx)
 	}
 	defer rows.Close()
 
