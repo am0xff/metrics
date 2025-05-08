@@ -3,7 +3,7 @@ package router
 import (
 	"database/sql"
 	"github.com/am0xff/metrics/internal/handlers"
-	storage "github.com/am0xff/metrics/internal/storage"
+	"github.com/am0xff/metrics/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 )

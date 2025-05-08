@@ -7,7 +7,7 @@ import (
 	"github.com/am0xff/metrics/internal/logger"
 	"github.com/am0xff/metrics/internal/middleware"
 	"github.com/am0xff/metrics/internal/router"
-	storage "github.com/am0xff/metrics/internal/storage"
+	"github.com/am0xff/metrics/internal/storage"
 	fstorage "github.com/am0xff/metrics/internal/storage/file"
 	memstorage "github.com/am0xff/metrics/internal/storage/memory"
 	pgstorage "github.com/am0xff/metrics/internal/storage/pg"

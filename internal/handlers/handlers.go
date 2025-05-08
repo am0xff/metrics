@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/am0xff/metrics/internal/models"
-	storage "github.com/am0xff/metrics/internal/storage"
+	"github.com/am0xff/metrics/internal/storage"
+	"github.com/am0xff/metrics/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
@@ -286,7 +287,9 @@ func (h *Handler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
-	if err := h.db.PingContext(r.Context()); err != nil {
+	if err := utils.Do(r.Context(), func() error {
+		return h.db.PingContext(r.Context())
+	}); err != nil {
 		http.Error(w, "database ping failed", http.StatusInternalServerError)
 		return
 	}

@@ -1,6 +1,6 @@
 package models
 
-import storage "github.com/am0xff/metrics/internal/storage"
+import "github.com/am0xff/metrics/internal/storage"
 
 type Metrics struct {
 	ID    string             `json:"id"`              // имя метрики

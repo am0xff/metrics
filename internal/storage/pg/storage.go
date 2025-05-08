@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"github.com/am0xff/metrics/internal/storage"
 	memstorage "github.com/am0xff/metrics/internal/storage/memory"
+	"github.com/am0xff/metrics/internal/utils"
 	"log"
 )
 
@@ -27,21 +28,27 @@ func (pgs *PGStorage) Bootstrap(ctx context.Context) error {
 	}
 	defer tx.Rollback()
 
-	if _, err := pgs.db.ExecContext(ctx, `
+	if err := utils.Do(ctx, func() error {
+		_, err := pgs.db.ExecContext(ctx, `
 		CREATE TABLE IF NOT EXISTS gauges (
 			key TEXT PRIMARY KEY,
 			value DOUBLE PRECISION NOT NULL
 		)
-	`); err != nil {
+	`)
+		return err
+	}); err != nil {
 		return err
 	}
 
-	if _, err = pgs.db.ExecContext(ctx, `
+	if err = utils.Do(ctx, func() error {
+		_, err := pgs.db.ExecContext(ctx, `
 		CREATE TABLE IF NOT EXISTS counters (
 			key TEXT PRIMARY KEY,
 			value BIGINT NOT NULL
 		)
-	`); err != nil {
+	`)
+		return err
+	}); err != nil {
 		return err
 	}
 
@@ -51,11 +58,14 @@ func (pgs *PGStorage) Bootstrap(ctx context.Context) error {
 func (pgs *PGStorage) SetGauge(ctx context.Context, key string, value storage.Gauge) {
 	pgs.ms.SetGauge(ctx, key, value)
 
-	_, err := pgs.db.ExecContext(ctx, `
-		INSERT INTO gauges (key, value)
-		VALUES ($1, $2)
-		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
-	`, key, float64(value))
+	err := utils.Do(ctx, func() error {
+		_, err := pgs.db.ExecContext(ctx, `
+			INSERT INTO gauges (key, value)
+			VALUES ($1, $2)
+			ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+		`, key, float64(value))
+		return err
+	})
 
 	if err != nil {
 		log.Printf("DBStorage.SetGauge exec error: %v", err)
@@ -64,9 +74,11 @@ func (pgs *PGStorage) SetGauge(ctx context.Context, key string, value storage.Ga
 
 func (pgs *PGStorage) GetGauge(ctx context.Context, key string) (storage.Gauge, bool) {
 	var v float64
-	err := pgs.db.QueryRowContext(ctx, `
-		SELECT value FROM gauges WHERE key = $1
-	`, key).Scan(&v)
+	err := utils.Do(ctx, func() error {
+		return pgs.db.QueryRowContext(ctx, `
+			SELECT value FROM gauges WHERE key = $1
+		`, key).Scan(&v)
+	})
 
 	if err != nil {
 		log.Printf("DBStorage.GetGauge query error: %v", err)

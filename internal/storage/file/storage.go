@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/am0xff/metrics/internal/storage"
 	memstorage "github.com/am0xff/metrics/internal/storage/memory"
+	"github.com/am0xff/metrics/internal/utils"
 	"log"
 	"os"
 )
@@ -30,17 +31,29 @@ func NewStorage(ctx context.Context, cfg Config) (*FileStorage, error) {
 	fs := &FileStorage{
 		cfg: cfg,
 		ms:  memstorage.NewStorage(),
+		ctx: ctx,
 	}
 
 	if !cfg.Restore {
 		return fs, nil
 	}
 
-	data, err := os.ReadFile(cfg.FileStoragePath)
-	if os.IsNotExist(err) {
-		return fs, nil
-	}
-	if err != nil {
+	//data, err := os.ReadFile(cfg.FileStoragePath)
+	//if os.IsNotExist(err) {
+	//	return fs, nil
+	//}
+	//if err != nil {
+	//	return nil, err
+	//}
+	var data []byte
+	if err := utils.Do(ctx, func() error {
+		var err error
+		data, err = os.ReadFile(cfg.FileStoragePath)
+		return err
+	}); err != nil {
+		if os.IsNotExist(err) {
+			return fs, nil
+		}
 		return nil, err
 	}
 
@@ -116,5 +129,7 @@ func (fs *FileStorage) Save() error {
 		return err
 	}
 
-	return os.WriteFile(fs.cfg.FileStoragePath, data, 0666)
+	return utils.Do(context.Background(), func() error {
+		return os.WriteFile(fs.cfg.FileStoragePath, data, 0666)
+	})
 }
