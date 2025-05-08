@@ -46,7 +46,7 @@ func NewStorage(ctx context.Context, cfg Config) (*FileStorage, error) {
 	//	return nil, err
 	//}
 	var data []byte
-	if err := utils.Do(ctx, func() error {
+	if err := utils.Call(ctx, func() error {
 		var err error
 		data, err = os.ReadFile(cfg.FileStoragePath)
 		return err
@@ -129,7 +129,7 @@ func (fs *FileStorage) Save() error {
 		return err
 	}
 
-	return utils.Do(context.Background(), func() error {
+	return utils.Call(context.Background(), func() error {
 		return os.WriteFile(fs.cfg.FileStoragePath, data, 0666)
 	})
 }

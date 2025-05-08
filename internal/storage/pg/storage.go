@@ -28,7 +28,7 @@ func (pgs *PGStorage) Bootstrap(ctx context.Context) error {
 	}
 	defer tx.Rollback()
 
-	if err := utils.Do(ctx, func() error {
+	if err := utils.Call(ctx, func() error {
 		_, err := pgs.db.ExecContext(ctx, `
 		CREATE TABLE IF NOT EXISTS gauges (
 			key TEXT PRIMARY KEY,
@@ -40,7 +40,7 @@ func (pgs *PGStorage) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
-	if err = utils.Do(ctx, func() error {
+	if err = utils.Call(ctx, func() error {
 		_, err := pgs.db.ExecContext(ctx, `
 		CREATE TABLE IF NOT EXISTS counters (
 			key TEXT PRIMARY KEY,
@@ -58,7 +58,7 @@ func (pgs *PGStorage) Bootstrap(ctx context.Context) error {
 func (pgs *PGStorage) SetGauge(ctx context.Context, key string, value storage.Gauge) {
 	pgs.ms.SetGauge(ctx, key, value)
 
-	err := utils.Do(ctx, func() error {
+	err := utils.Call(ctx, func() error {
 		_, err := pgs.db.ExecContext(ctx, `
 			INSERT INTO gauges (key, value)
 			VALUES ($1, $2)
@@ -74,7 +74,7 @@ func (pgs *PGStorage) SetGauge(ctx context.Context, key string, value storage.Ga
 
 func (pgs *PGStorage) GetGauge(ctx context.Context, key string) (storage.Gauge, bool) {
 	var v float64
-	err := utils.Do(ctx, func() error {
+	err := utils.Call(ctx, func() error {
 		return pgs.db.QueryRowContext(ctx, `
 			SELECT value FROM gauges WHERE key = $1
 		`, key).Scan(&v)

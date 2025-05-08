@@ -10,7 +10,20 @@ import (
 	"time"
 )
 
-func Do(ctx context.Context, f func() error) error {
+func Call(ctx context.Context, f func() error) error {
+	err := f()
+	if err == nil {
+		return nil
+	}
+
+	if isRetriable(err) {
+		return retry(ctx, f)
+	}
+
+	return err
+}
+
+func retry(ctx context.Context, f func() error) error {
 	intervals := []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second}
 
 	var err error
