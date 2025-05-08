@@ -63,9 +63,5 @@ func asPgError(err error) *pgconn.PgError {
 
 func isPgErrorRetryable(pgErr *pgconn.PgError) bool {
 	code := pgErr.Code
-	if pgerrcode.IsConnectionException(code) {
-		return true
-	}
-
-	return false
+	return pgerrcode.IsConnectionException(code)
 }
