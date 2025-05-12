@@ -81,70 +81,7 @@ func (h *Handler) POSTGetMetric(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//func (h *Handler) POSTUpdateMetric(w http.ResponseWriter, r *http.Request) {
-//	if r.Method != http.MethodPost {
-//		w.WriteHeader(http.StatusMethodNotAllowed)
-//		return
-//	}
-//
-//	var req models.Metrics
-//	dec := json.NewDecoder(r.Body)
-//	if err := dec.Decode(&req); err != nil {
-//		w.WriteHeader(http.StatusBadRequest)
-//		return
-//	}
-//
-//	if req.MType == "" || req.ID == "" {
-//		w.WriteHeader(http.StatusNotFound)
-//		return
-//	}
-//
-//	var resp models.Metrics
-//
-//	switch req.MType {
-//	case storage.MetricTypeGauge:
-//		if req.Value == nil {
-//			w.WriteHeader(http.StatusBadRequest)
-//			return
-//		}
-//
-//		newValue := storage.Gauge(*req.Value)
-//		h.storageProvider.SetGauge(r.Context(), req.ID, newValue)
-//
-//		resp = models.Metrics{
-//			ID:    req.ID,
-//			MType: req.MType,
-//			Value: req.Value,
-//		}
-//	case storage.MetricTypeCounter:
-//		if req.Delta == nil {
-//			w.WriteHeader(http.StatusBadRequest)
-//			return
-//		}
-//
-//		newValue := storage.Counter(*req.Delta)
-//		h.storageProvider.SetCounter(r.Context(), req.ID, newValue)
-//
-//		resp = models.Metrics{
-//			ID:    req.ID,
-//			MType: req.MType,
-//			Delta: req.Delta,
-//		}
-//	default:
-//		w.WriteHeader(http.StatusBadRequest)
-//		return
-//	}
-//
-//	w.Header().Set("Content-Type", "application/json")
-//	w.WriteHeader(http.StatusOK)
-//
-//	enc := json.NewEncoder(w)
-//	if err := enc.Encode(resp); err != nil {
-//		return
-//	}
-//}
-
-func (h *Handler) POSTUpdateMetricGauge(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) POSTUpdateMetric(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -157,68 +94,45 @@ func (h *Handler) POSTUpdateMetricGauge(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if req.ID == "" {
+	if req.MType == "" || req.ID == "" {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	var resp models.Metrics
 
-	if req.Value == nil {
+	switch req.MType {
+	case storage.MetricTypeGauge:
+		if req.Value == nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		newValue := storage.Gauge(*req.Value)
+		h.storageProvider.SetGauge(r.Context(), req.ID, newValue)
+
+		resp = models.Metrics{
+			ID:    req.ID,
+			MType: req.MType,
+			Value: req.Value,
+		}
+	case storage.MetricTypeCounter:
+		if req.Delta == nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		newValue := storage.Counter(*req.Delta)
+		h.storageProvider.SetCounter(r.Context(), req.ID, newValue)
+
+		resp = models.Metrics{
+			ID:    req.ID,
+			MType: req.MType,
+			Delta: req.Delta,
+		}
+	default:
 		w.WriteHeader(http.StatusBadRequest)
 		return
-	}
-
-	newValue := storage.Gauge(*req.Value)
-	h.storageProvider.SetGauge(r.Context(), req.ID, newValue)
-
-	resp = models.Metrics{
-		ID:    req.ID,
-		MType: req.MType,
-		Value: req.Value,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(resp); err != nil {
-		return
-	}
-}
-
-func (h *Handler) POSTUpdateMetricCounter(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
-	var req models.Metrics
-	dec := json.NewDecoder(r.Body)
-	if err := dec.Decode(&req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	if req.ID == "" {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	var resp models.Metrics
-
-	if req.Delta == nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	newValue := storage.Counter(*req.Delta)
-	h.storageProvider.SetCounter(r.Context(), req.ID, newValue)
-
-	resp = models.Metrics{
-		ID:    req.ID,
-		MType: req.MType,
-		Delta: req.Delta,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -308,11 +222,6 @@ func (h *Handler) GETGetMetric(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GETUpdateMetric(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
 	metricType := chi.URLParam(r, "type")
 	name := chi.URLParam(r, "name")
 	valueStr := chi.URLParam(r, "value")
