@@ -18,6 +18,6 @@ func SetupRoutes(sp storage.StorageProvider) http.Handler {
 	r.Post("/update/", handler.POSTUpdateMetric)
 	r.Post("/updates/", handler.POSTUpdatesMetrics)
 	r.Get("/value/{type}/{name}", handler.GETGetMetric)
-	r.Post("/update/{type}/{name}/{value}", handler.GETUpdateMetric)
+	r.Get("/update/{type}/{name}/{value}", handler.GETUpdateMetric)
 	return r
 }
