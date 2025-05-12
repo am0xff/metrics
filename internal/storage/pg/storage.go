@@ -166,3 +166,7 @@ func (pgs *PGStorage) KeysCounter(ctx context.Context) []string {
 
 	return keys
 }
+
+func (pgs *PGStorage) Ping(ctx context.Context) error {
+	return pgs.db.PingContext(ctx)
+}

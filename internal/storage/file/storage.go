@@ -133,3 +133,7 @@ func (fs *FileStorage) Save() error {
 		return os.WriteFile(fs.cfg.FileStoragePath, data, 0666)
 	})
 }
+
+func (fs *FileStorage) Ping(_ context.Context) error {
+	return nil
+}

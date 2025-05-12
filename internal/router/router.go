@@ -1,17 +1,16 @@
 package router
 
 import (
-	"database/sql"
 	"github.com/am0xff/metrics/internal/handlers"
 	"github.com/am0xff/metrics/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 )
 
-func SetupRoutes(sp storage.StorageProvider, db *sql.DB) http.Handler {
+func SetupRoutes(sp storage.StorageProvider) http.Handler {
 	r := chi.NewRouter()
 
-	handler := handlers.NewHandler(sp, db)
+	handler := handlers.NewHandler(sp)
 
 	r.Get("/", handler.GetMetrics)
 	r.Get("/ping", handler.Ping)
