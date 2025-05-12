@@ -40,7 +40,3 @@ func (m *MemStorage) KeysGauge(_ context.Context) []string {
 func (m *MemStorage) KeysCounter(_ context.Context) []string {
 	return m.Counters.Keys()
 }
-
-func (m *MemStorage) Ping(_ context.Context) error {
-	return nil
-}

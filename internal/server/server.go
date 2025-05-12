@@ -60,7 +60,7 @@ func Run() error {
 		s = ms
 	}
 
-	r := router.SetupRoutes(s)
+	r := router.SetupRoutes(s, db)
 
 	handler := middleware.LoggerMiddleware(r)
 	handler = middleware.GzipMiddleware(handler)
