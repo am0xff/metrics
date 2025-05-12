@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/am0xff/metrics/internal/storage"
+	memstorage "github.com/am0xff/metrics/internal/storage/memory"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -10,11 +10,11 @@ import (
 )
 
 func TestGetMetric(t *testing.T) {
-	s := storage.NewMemoryStorage()
-	handler := NewHandler(s)
+	ms := memstorage.NewStorage()
+	handler := NewHandler(ms)
 
-	s.Gauges.Set("metric_of_gauge", 1)
-	s.Counters.Set("metric_of_counter", 2)
+	ms.Gauges.Set("metric_of_gauge", 1)
+	ms.Counters.Set("metric_of_counter", 2)
 
 	h := http.HandlerFunc(handler.POSTGetMetric)
 	srv := httptest.NewServer(h)
@@ -102,8 +102,8 @@ func TestGetMetric(t *testing.T) {
 }
 
 func TestUpdateMetric(t *testing.T) {
-	s := storage.NewMemoryStorage()
-	handler := NewHandler(s)
+	ms := memstorage.NewStorage()
+	handler := NewHandler(ms)
 
 	h := http.HandlerFunc(handler.POSTUpdateMetric)
 	srv := httptest.NewServer(h)

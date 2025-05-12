@@ -47,7 +47,7 @@ func Run() error {
 			g := agent.gauges
 			c := agent.counters
 			if g != nil && c != nil {
-				agent.reporter.Report(g, c)
+				agent.reporter.ReportBatch(g, c)
 			}
 			time.Sleep(time.Duration(cfg.ReportInterval) * time.Second)
 		}
