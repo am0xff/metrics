@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/am0xff/metrics/internal/models"
@@ -15,11 +14,10 @@ import (
 
 type Handler struct {
 	storageProvider storage.StorageProvider
-	db              *sql.DB
 }
 
-func NewHandler(sp storage.StorageProvider, db *sql.DB) *Handler {
-	return &Handler{storageProvider: sp, db: db}
+func NewHandler(sp storage.StorageProvider) *Handler {
+	return &Handler{storageProvider: sp}
 }
 
 func (h *Handler) POSTGetMetric(w http.ResponseWriter, r *http.Request) {
@@ -196,35 +194,33 @@ func (h *Handler) POSTUpdatesMetrics(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *Handler) GETGetMetric(w http.ResponseWriter, r *http.Request) {
-	metricType := chi.URLParam(r, "type")
+func (h *Handler) GETGetMetricGauge(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	switch storage.MetricType(metricType) {
-	case storage.MetricTypeGauge:
-		v, ok := h.storageProvider.GetGauge(r.Context(), name)
-		if !ok {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		_, _ = io.WriteString(w, strconv.FormatFloat(float64(v), 'f', -1, 64))
-	case storage.MetricTypeCounter:
-		v, ok := h.storageProvider.GetCounter(r.Context(), name)
-		if !ok {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		_, _ = io.WriteString(w, strconv.FormatInt(int64(v), 10))
-	default:
-		w.WriteHeader(http.StatusBadRequest)
+	v, ok := h.storageProvider.GetGauge(r.Context(), name)
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+	_, _ = io.WriteString(w, strconv.FormatFloat(float64(v), 'f', -1, 64))
 
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *Handler) GETUpdateMetric(w http.ResponseWriter, r *http.Request) {
-	metricType := chi.URLParam(r, "type")
+func (h *Handler) GETGetMetricCounter(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+
+	v, ok := h.storageProvider.GetCounter(r.Context(), name)
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	_, _ = io.WriteString(w, strconv.FormatInt(int64(v), 10))
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) GETUpdateGauge(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	valueStr := chi.URLParam(r, "value")
 
@@ -233,26 +229,31 @@ func (h *Handler) GETUpdateMetric(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch storage.MetricType(metricType) {
-	case storage.MetricTypeGauge:
-		value, err := strconv.ParseFloat(valueStr, 64)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		h.storageProvider.SetGauge(r.Context(), name, storage.Gauge(value))
-	case storage.MetricTypeCounter:
-		value, err := strconv.ParseInt(valueStr, 10, 64)
-		if err != nil {
-			http.Error(w, "Invalid counter value", http.StatusBadRequest)
-			return
-		}
-		h.storageProvider.SetCounter(r.Context(), name, storage.Counter(value))
-	default:
+	value, err := strconv.ParseFloat(valueStr, 64)
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	h.storageProvider.SetGauge(r.Context(), name, storage.Gauge(value))
 
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) GETUpdateCounter(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+	valueStr := chi.URLParam(r, "value")
+
+	if name == "" {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	value, err := strconv.ParseInt(valueStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid counter value", http.StatusBadRequest)
+		return
+	}
+	h.storageProvider.SetCounter(r.Context(), name, storage.Counter(value))
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -286,7 +287,7 @@ func (h *Handler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
-	if err := h.db.PingContext(r.Context()); err != nil {
+	if err := h.storageProvider.Ping(r.Context()); err != nil {
 		http.Error(w, "database ping failed", http.StatusInternalServerError)
 		return
 	}

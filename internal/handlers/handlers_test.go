@@ -11,7 +11,7 @@ import (
 
 func TestGetMetric(t *testing.T) {
 	ms := memstorage.NewStorage()
-	handler := NewHandler(ms, nil)
+	handler := NewHandler(ms)
 
 	ms.Gauges.Set("metric_of_gauge", 1)
 	ms.Counters.Set("metric_of_counter", 2)
@@ -103,7 +103,7 @@ func TestGetMetric(t *testing.T) {
 
 func TestUpdateMetric(t *testing.T) {
 	ms := memstorage.NewStorage()
-	handler := NewHandler(ms, nil)
+	handler := NewHandler(ms)
 
 	h := http.HandlerFunc(handler.POSTUpdateMetric)
 	srv := httptest.NewServer(h)

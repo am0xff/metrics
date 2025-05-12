@@ -21,6 +21,7 @@ type StorageProvider interface {
 	SetGauge(ctx context.Context, key string, value Gauge)
 	SetCounter(ctx context.Context, key string, value Counter)
 	KeysCounter(ctx context.Context) []string
+	Ping(ctx context.Context) error
 }
 
 type Storage[T interface{ Gauge | Counter }] struct {
