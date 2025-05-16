@@ -62,8 +62,9 @@ func Run() error {
 
 	r := router.SetupRoutes(s)
 
-	handler := middleware.LoggerMiddleware(r)
-	handler = middleware.GzipMiddleware(handler)
+	handler := middleware.LoggerMiddleware(r, cfg.Key)
+	handler = middleware.GzipMiddleware(handler, cfg.Key)
+	//handler = middleware.HashMiddleware(handler)
 
 	if cfg.StoreInterval != 0 {
 		go func() {

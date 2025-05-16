@@ -11,6 +11,7 @@ type Config struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"storage_file"`
 	Restore         bool   `env:"RESTORE" envDefault:"false"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
+	Key             string `env:"KEY" envDefault:""`
 }
 
 func LoadConfig() (Config, error) {
@@ -26,6 +27,7 @@ func LoadConfig() (Config, error) {
 	fileStoragePath := flag.String("f", cfg.FileStoragePath, "Путь до файла, куда сохраняются текущие значения")
 	restore := flag.Bool("r", cfg.Restore, "Загружать или нет ранее сохранённые значения")
 	databaseDSN := flag.String("d", cfg.DatabaseDSN, "DNS database host")
+	fKey := flag.String("k", cfg.Key, "HashSHA256 ключ")
 
 	flag.Parse()
 
@@ -34,6 +36,7 @@ func LoadConfig() (Config, error) {
 	cfg.FileStoragePath = *fileStoragePath
 	cfg.Restore = *restore
 	cfg.DatabaseDSN = *databaseDSN
+	cfg.Key = *fKey
 
 	return cfg, nil
 }
