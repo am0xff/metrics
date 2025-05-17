@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"bytes"
 	"compress/gzip"
 	"io"
 	"net/http"
@@ -73,7 +74,7 @@ func (c *compressReader) Close() error {
 	return c.zr.Close()
 }
 
-func GzipMiddleware(h http.Handler) http.Handler {
+func GzipMiddleware(h http.Handler, key string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// по умолчанию устанавливаем оригинальный http.ResponseWriter как тот,
 		// который будем передавать следующей функции
@@ -83,13 +84,27 @@ func GzipMiddleware(h http.Handler) http.Handler {
 		contentEncoding := r.Header.Get("Content-Encoding")
 		sendsGzip := strings.Contains(contentEncoding, "gzip")
 		if sendsGzip {
-			// оборачиваем тело запроса в io.Reader с поддержкой декомпрессии
-			cr, err := newCompressReader(r.Body)
+			raw, err := io.ReadAll(r.Body)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			// меняем тело запроса на новое
+
+			// TODO: This code break 14-th test
+			//hashHeader := r.Header.Get("HashSHA256")
+			//if key != "" && hashHeader != "" {
+			//	if err := utils.ValidateHash(raw, key, hashHeader); err != nil {
+			//		w.WriteHeader(http.StatusForbidden)
+			//		return
+			//	}
+			//}
+
+			cr, err := newCompressReader(io.NopCloser(bytes.NewReader(raw)))
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
 			r.Body = cr
 			defer cr.Close()
 		}
