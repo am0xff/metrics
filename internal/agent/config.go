@@ -10,6 +10,7 @@ type Config struct {
 	PollInterval   int    `env:"POLL_INTERVAL" envDefault:"2"`
 	ReportInterval int    `env:"REPORT_INTERVAL" envDefault:"10"`
 	Key            string `env:"KEY" envDefault:""`
+	RateLimit      int    `env:"RATE_LIMIT" envDefault:"1"`
 }
 
 func LoadConfig() (Config, error) {
@@ -24,12 +25,14 @@ func LoadConfig() (Config, error) {
 	fPoll := flag.Int("p", cfg.PollInterval, "Интервал опроса метрик (сек)")
 	fReport := flag.Int("r", cfg.ReportInterval, "Интервал отправки метрик (сек)")
 	fKey := flag.String("k", cfg.Key, "HashSHA256 ключ")
+	fRateLimit := flag.Int("l", cfg.RateLimit, "Количество одновременно исходящих запросов на сервер")
 	flag.Parse()
 
 	cfg.ServerAddr = *fAddr
 	cfg.PollInterval = *fPoll
 	cfg.ReportInterval = *fReport
 	cfg.Key = *fKey
+	cfg.RateLimit = *fRateLimit
 
 	return cfg, nil
 }
