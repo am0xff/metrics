@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func LoggerMiddleware(h http.Handler, key string) http.Handler {
+func LoggerMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
