@@ -7,6 +7,7 @@ import (
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -28,6 +29,8 @@ func NewAgent(cfg Config) *Agent {
 }
 
 func Run() error {
+	var wg sync.WaitGroup
+
 	cfg, err := LoadConfig()
 	if err != nil {
 		log.Fatalf("load config: %v", err)
@@ -37,17 +40,21 @@ func Run() error {
 	fmt.Println("Running agent on", cfg.ServerAddr)
 
 	for i := 0; i < cfg.RateLimit; i++ {
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			for m := range agent.jobs {
 				agent.reporter.send(m.MType, m.ID, m.String())
 			}
 		}()
 	}
 
+	wg.Add(1)
 	go func() {
 		collector := NewCollector()
 		ticker := time.NewTicker(time.Duration(cfg.PollInterval) * time.Second)
 		defer ticker.Stop()
+		defer wg.Done()
 		for range ticker.C {
 			g, c := collector.Collect()
 			for name, v := range g {
@@ -59,9 +66,11 @@ func Run() error {
 		}
 	}()
 
+	wg.Add(1)
 	go func() {
 		ticker := time.NewTicker(time.Duration(cfg.ReportInterval) * time.Second)
 		defer ticker.Stop()
+		defer wg.Done()
 		for range ticker.C {
 			vm, _ := mem.VirtualMemory()
 
@@ -83,5 +92,7 @@ func Run() error {
 		}
 	}()
 
-	select {}
+	wg.Wait()
+
+	return nil
 }
