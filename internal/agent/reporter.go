@@ -7,22 +7,26 @@ import (
 	"fmt"
 	"github.com/am0xff/metrics/internal/models"
 	"github.com/am0xff/metrics/internal/storage"
+	"github.com/am0xff/metrics/internal/utils"
 	"log"
 	"net/http"
 	"strconv"
 )
 
-// Reporter отправляет метрики на HTTP‑сервер.
-type Reporter struct {
-	serverAddr string
-	client     *http.Client
+type ReporterConfig struct {
+	ServerAddr string
+	Key        string
 }
 
-// NewReporter создаёт отправщика.
-func NewReporter(serverAddr string) *Reporter {
+type Reporter struct {
+	client *http.Client
+	cfg    *ReporterConfig
+}
+
+func NewReporter(cfg *ReporterConfig) *Reporter {
 	return &Reporter{
-		serverAddr: serverAddr,
-		client:     http.DefaultClient,
+		cfg:    cfg,
+		client: http.DefaultClient,
 	}
 }
 
@@ -87,15 +91,18 @@ func (r *Reporter) send(metricType storage.MetricType, name, value string) {
 		return
 	}
 
-	url := fmt.Sprintf("http://%s/update/", r.serverAddr)
-	req, err := http.NewRequest(http.MethodPost, url, &buf)
+	compressed := buf.Bytes()
+	url := fmt.Sprintf("http://%s/update/", r.cfg.ServerAddr)
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(compressed))
 	if err != nil {
 		log.Println("create request:", err)
 		return
 	}
-
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
+	if r.cfg.Key != "" {
+		req.Header.Set("HashSHA256", utils.CreateHash(compressed, r.cfg.Key))
+	}
 
 	resp, err := r.client.Do(req)
 	if err != nil {
@@ -163,9 +170,9 @@ func (r *Reporter) sendBatch(gauges map[string]float64, counters map[string]int6
 		log.Println("gzip close failed:", err)
 		return
 	}
-
-	url := fmt.Sprintf("http://%s/updates/", r.serverAddr)
-	req, err := http.NewRequest(http.MethodPost, url, &buf)
+	compressed := buf.Bytes()
+	url := fmt.Sprintf("http://%s/updates/", r.cfg.ServerAddr)
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(compressed))
 	if err != nil {
 		log.Println("create request:", err)
 		return
@@ -173,6 +180,9 @@ func (r *Reporter) sendBatch(gauges map[string]float64, counters map[string]int6
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
+	if r.cfg.Key != "" {
+		req.Header.Set("HashSHA256", utils.CreateHash(compressed, r.cfg.Key))
+	}
 
 	resp, err := r.client.Do(req)
 	if err != nil {

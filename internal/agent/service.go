@@ -18,9 +18,12 @@ func NewAgent(config Config) *Agent {
 	return &Agent{
 		config:    config,
 		collector: NewCollector(),
-		reporter:  NewReporter(config.ServerAddr),
-		gauges:    make(map[string]float64),
-		counters:  make(map[string]int64),
+		reporter: NewReporter(&ReporterConfig{
+			ServerAddr: config.ServerAddr,
+			Key:        config.Key,
+		}),
+		gauges:   make(map[string]float64),
+		counters: make(map[string]int64),
 	}
 }
 
