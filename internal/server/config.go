@@ -37,6 +37,9 @@ func LoadConfig() (Config, error) {
 	cfg.Restore = *restore
 	cfg.DatabaseDSN = *databaseDSN
 	cfg.Key = *fKey
+	//if keyFromEnv := os.Getenv("KEY"); keyFromEnv != "" {
+	//	cfg.Key = keyFromEnv
+	//}
 
 	return cfg, nil
 }

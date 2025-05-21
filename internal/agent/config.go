@@ -3,6 +3,7 @@ package agent
 import (
 	"flag"
 	"github.com/caarlos0/env/v6"
+	"os"
 )
 
 type Config struct {
@@ -23,13 +24,16 @@ func LoadConfig() (Config, error) {
 	fAddr := flag.String("a", cfg.ServerAddr, "HTTP сервер адрес")
 	fPoll := flag.Int("p", cfg.PollInterval, "Интервал опроса метрик (сек)")
 	fReport := flag.Int("r", cfg.ReportInterval, "Интервал отправки метрик (сек)")
-	fKey := flag.String("k", cfg.Key, "HashSHA256 ключ")
+	//fKey := flag.String("k", cfg.Key, "HashSHA256 ключ")
 	flag.Parse()
 
 	cfg.ServerAddr = *fAddr
 	cfg.PollInterval = *fPoll
 	cfg.ReportInterval = *fReport
-	cfg.Key = *fKey
+	//cfg.Key = *fKey
+	if keyFromEnv := os.Getenv("KEY"); keyFromEnv != "" {
+		cfg.Key = keyFromEnv
+	}
 
 	return cfg, nil
 }
