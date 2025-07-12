@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"bytes"
 	"compress/gzip"
 	"github.com/am0xff/metrics/internal/utils"
 	"io"
@@ -14,17 +13,14 @@ import (
 type compressWriter struct {
 	w   http.ResponseWriter
 	zw  *gzip.Writer
-	buf *bytes.Buffer
 	key string
 }
 
 func newCompressWriter(w http.ResponseWriter, key string) *compressWriter {
-	buf := &bytes.Buffer{}
 	return &compressWriter{
 		w:   w,
-		zw:  gzip.NewWriter(buf),
+		zw:  gzip.NewWriter(w),
 		key: key,
-		buf: buf,
 	}
 }
 
@@ -33,6 +29,11 @@ func (c *compressWriter) Header() http.Header {
 }
 
 func (c *compressWriter) Write(p []byte) (int, error) {
+	if c.key != "" {
+		h := utils.CreateHash(p, c.key)
+		c.w.Header().Set("HashSHA256", h)
+	}
+
 	return c.zw.Write(p)
 }
 
@@ -45,22 +46,12 @@ func (c *compressWriter) WriteHeader(statusCode int) {
 	c.w.WriteHeader(statusCode)
 }
 
-// Close закрывает gzip.Writer и досылает все данные из буфера.
+// Close закрывает gzip.Writer
 func (c *compressWriter) Close() error {
-	//return c.zw.Close()
-	// 1) Завершаем запись в buf
-	if err := c.zw.Close(); err != nil {
-		return err
+	if c.zw == nil {
+		return nil
 	}
-	compressed := c.buf.Bytes()
-
-	if c.key != "" {
-		h := utils.CreateHash(compressed, c.key)
-		c.w.Header().Set("HashSHA256", h)
-	}
-
-	_, err := c.w.Write(compressed)
-	return err
+	return c.zw.Close()
 }
 
 // compressReader реализует интерфейс io.ReadCloser и позволяет прозрачно для сервера
@@ -87,10 +78,18 @@ func (c compressReader) Read(p []byte) (n int, err error) {
 }
 
 func (c *compressReader) Close() error {
-	if err := c.r.Close(); err != nil {
-		return err
+	var err error
+	if c.r != nil {
+		err = c.r.Close()
 	}
-	return c.zr.Close()
+
+	if c.zr != nil {
+		if closeErr := c.zr.Close(); closeErr != nil && err == nil {
+			err = closeErr
+		}
+	}
+
+	return err
 }
 
 func GzipMiddleware(next http.Handler, key string) http.Handler {
@@ -98,14 +97,7 @@ func GzipMiddleware(next http.Handler, key string) http.Handler {
 		ow := w
 
 		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-			raw, err := io.ReadAll(r.Body)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			defer r.Body.Close()
-
-			cr, err := newCompressReader(io.NopCloser(bytes.NewReader(raw)))
+			cr, err := newCompressReader(r.Body)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return

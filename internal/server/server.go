@@ -14,6 +14,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"time"
 )
 
@@ -24,6 +25,14 @@ func Run() error {
 	cfg, err := LoadConfig()
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
+	}
+
+	if cfg.PprofEnabled {
+		go func() {
+			if err := http.ListenAndServe(cfg.PprofAddr, nil); err != nil {
+				fmt.Errorf("start pprof server: %w", err)
+			}
+		}()
 	}
 
 	// Connect to DB
