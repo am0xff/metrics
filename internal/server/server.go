@@ -30,7 +30,7 @@ func Run() error {
 	if cfg.PprofEnabled {
 		go func() {
 			if err := http.ListenAndServe(cfg.PprofAddr, nil); err != nil {
-				fmt.Errorf("start pprof server: %w", err)
+				fmt.Printf("start pprof server: %v", err)
 			}
 		}()
 	}
