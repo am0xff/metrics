@@ -3,11 +3,12 @@ package utils
 import (
 	"context"
 	"errors"
-	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5/pgconn"
 	"os"
 	"syscall"
 	"time"
+
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 func Call(ctx context.Context, f func() error) error {

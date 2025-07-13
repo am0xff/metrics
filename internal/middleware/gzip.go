@@ -2,10 +2,11 @@ package middleware
 
 import (
 	"compress/gzip"
-	"github.com/am0xff/metrics/internal/utils"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/am0xff/metrics/internal/utils"
 )
 
 // compressWriter реализует интерфейс http.ResponseWriter и позволяет прозрачно для сервера

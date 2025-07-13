@@ -1,12 +1,13 @@
 package handlers
 
 import (
-	memstorage "github.com/am0xff/metrics/internal/storage/memory"
-	"github.com/go-resty/resty/v2"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	memstorage "github.com/am0xff/metrics/internal/storage/memory"
+	"github.com/go-resty/resty/v2"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetMetric(t *testing.T) {

@@ -3,10 +3,11 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"log"
+
 	"github.com/am0xff/metrics/internal/storage"
 	memstorage "github.com/am0xff/metrics/internal/storage/memory"
 	"github.com/am0xff/metrics/internal/utils"
-	"log"
 )
 
 type PGStorage struct {

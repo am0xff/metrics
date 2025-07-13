@@ -3,11 +3,12 @@ package file
 import (
 	"context"
 	"encoding/json"
+	"log"
+	"os"
+
 	"github.com/am0xff/metrics/internal/storage"
 	memstorage "github.com/am0xff/metrics/internal/storage/memory"
 	"github.com/am0xff/metrics/internal/utils"
-	"log"
-	"os"
 )
 
 type Config struct {

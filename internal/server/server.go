@@ -4,6 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
+	"net/http"
+	_ "net/http/pprof"
+	"time"
+
 	"github.com/am0xff/metrics/internal/logger"
 	"github.com/am0xff/metrics/internal/middleware"
 	"github.com/am0xff/metrics/internal/router"
@@ -12,10 +17,6 @@ import (
 	memstorage "github.com/am0xff/metrics/internal/storage/memory"
 	pgstorage "github.com/am0xff/metrics/internal/storage/pg"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"log"
-	"net/http"
-	_ "net/http/pprof"
-	"time"
 )
 
 func Run() error {

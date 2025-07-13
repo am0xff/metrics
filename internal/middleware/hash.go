@@ -2,9 +2,10 @@ package middleware
 
 import (
 	"bytes"
-	"github.com/am0xff/metrics/internal/utils"
 	"io"
 	"net/http"
+
+	"github.com/am0xff/metrics/internal/utils"
 )
 
 func HashMiddleware(next http.Handler, key string) http.Handler {

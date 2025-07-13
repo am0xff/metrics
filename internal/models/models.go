@@ -1,8 +1,9 @@
 package models
 
 import (
-	"github.com/am0xff/metrics/internal/storage"
 	"strconv"
+
+	"github.com/am0xff/metrics/internal/storage"
 )
 
 type Metrics struct {

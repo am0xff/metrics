@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+
 	"github.com/am0xff/metrics/internal/storage"
 )
 

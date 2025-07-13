@@ -2,6 +2,7 @@ package agent
 
 import (
 	"flag"
+
 	"github.com/caarlos0/env/v6"
 )
 

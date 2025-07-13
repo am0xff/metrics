@@ -1,10 +1,11 @@
 package router
 
 import (
+	"net/http"
+
 	"github.com/am0xff/metrics/internal/handlers"
 	"github.com/am0xff/metrics/internal/storage"
 	"github.com/go-chi/chi/v5"
-	"net/http"
 )
 
 func SetupRoutes(sp storage.StorageProvider) http.Handler {

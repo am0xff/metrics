@@ -3,13 +3,14 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/am0xff/metrics/internal/models"
-	"github.com/am0xff/metrics/internal/storage"
-	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/am0xff/metrics/internal/models"
+	"github.com/am0xff/metrics/internal/storage"
+	"github.com/go-chi/chi/v5"
 )
 
 type Handler struct {
