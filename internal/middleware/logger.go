@@ -1,10 +1,11 @@
 package middleware
 
 import (
-	"github.com/am0xff/metrics/internal/logger"
-	"go.uber.org/zap"
 	"net/http"
 	"time"
+
+	"github.com/am0xff/metrics/internal/logger"
+	"go.uber.org/zap"
 )
 
 func LoggerMiddleware(h http.Handler) http.Handler {

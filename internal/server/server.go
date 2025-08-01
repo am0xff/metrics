@@ -4,6 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
+	"net/http"
+	_ "net/http/pprof"
+	"time"
+
 	"github.com/am0xff/metrics/internal/logger"
 	"github.com/am0xff/metrics/internal/middleware"
 	"github.com/am0xff/metrics/internal/router"
@@ -12,9 +17,6 @@ import (
 	memstorage "github.com/am0xff/metrics/internal/storage/memory"
 	pgstorage "github.com/am0xff/metrics/internal/storage/pg"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"log"
-	"net/http"
-	"time"
 )
 
 func Run() error {
@@ -24,6 +26,14 @@ func Run() error {
 	cfg, err := LoadConfig()
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
+	}
+
+	if cfg.PprofEnabled {
+		go func() {
+			if err := http.ListenAndServe(cfg.PprofAddr, nil); err != nil {
+				fmt.Printf("start pprof server: %v", err)
+			}
+		}()
 	}
 
 	// Connect to DB

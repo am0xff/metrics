@@ -2,13 +2,14 @@ package agent
 
 import (
 	"fmt"
+	"log"
+	"sync"
+	"time"
+
 	"github.com/am0xff/metrics/internal/models"
 	"github.com/am0xff/metrics/internal/storage"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
-	"log"
-	"sync"
-	"time"
 )
 
 type Agent struct {

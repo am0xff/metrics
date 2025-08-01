@@ -5,12 +5,13 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"github.com/am0xff/metrics/internal/models"
-	"github.com/am0xff/metrics/internal/storage"
-	"github.com/am0xff/metrics/internal/utils"
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/am0xff/metrics/internal/models"
+	"github.com/am0xff/metrics/internal/storage"
+	"github.com/am0xff/metrics/internal/utils"
 )
 
 type ReporterConfig struct {
