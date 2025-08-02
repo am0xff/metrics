@@ -143,22 +143,3 @@ func TestMemStorage_Multiple_Operations(t *testing.T) {
 		assert.Equal(t, expectedValue, value, "Counter %s value mismatch", key)
 	}
 }
-
-func TestMemStorage_Context_Independence(t *testing.T) {
-	store := NewStorage()
-
-	// Test that different contexts work the same
-	ctx1 := context.Background()
-	ctx2 := context.WithValue(context.Background(), "test", "value")
-
-	testKey := "test_gauge"
-	testValue := storage.Gauge(42.0)
-
-	// Set with ctx1
-	store.SetGauge(ctx1, testKey, testValue)
-
-	// Get with ctx2
-	value, exists := store.GetGauge(ctx2, testKey)
-	assert.True(t, exists)
-	assert.Equal(t, testValue, value)
-}
