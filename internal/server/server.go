@@ -7,6 +7,10 @@ import (
 	"log"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/am0xff/metrics/internal/logger"
@@ -77,17 +81,65 @@ func Run() error {
 	handler = middleware.RSAMiddleware(handler, cfg.CryptoKey)
 	handler = middleware.LoggerMiddleware(handler)
 
+	server := &http.Server{
+		Addr:    cfg.ServerAddr,
+		Handler: handler,
+	}
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	var saveWg sync.WaitGroup
+	saveCtx, saveCancel := context.WithCancel(context.Background())
+
 	if cfg.StoreInterval != 0 {
+		saveWg.Add(1)
 		go func() {
+			defer saveWg.Done()
+			ticker := time.NewTicker(time.Duration(cfg.StoreInterval) * time.Second)
+			defer ticker.Stop()
+
 			for {
-				if err := fs.Save(); err != nil {
-					log.Printf("Save storage to the file: %v", err)
+				select {
+				case <-saveCtx.Done():
+					return
+				case <-ticker.C:
+					if cfg.DatabaseDSN == "" && cfg.FileStoragePath != "" {
+						if err := fs.Save(); err != nil {
+							log.Printf("Save storage to the file: %v", err)
+						}
+					}
 				}
-				time.Sleep(time.Duration(cfg.StoreInterval) * time.Second)
 			}
 		}()
 	}
 
-	fmt.Println("Running server on", cfg.ServerAddr)
-	return http.ListenAndServe(cfg.ServerAddr, handler)
+	go func() {
+		fmt.Println("Running server on", cfg.ServerAddr)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed: %v", err)
+		}
+	}()
+
+	sig := <-sigChan
+	fmt.Printf("\nReceived signal: %v. Shutting down gracefully...\n", sig)
+
+	saveCancel()
+	saveWg.Wait()
+
+	if cfg.DatabaseDSN == "" && cfg.FileStoragePath != "" {
+		if err := fs.Save(); err != nil {
+			log.Printf("Save storage to the file: %v", err)
+		}
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Server shutdown failed: %v", err)
+		return err
+	}
+
+	return nil
 }
