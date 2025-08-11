@@ -24,6 +24,7 @@ func NewAgent(cfg Config) *Agent {
 		reporter: NewReporter(&ReporterConfig{
 			ServerAddr: cfg.ServerAddr,
 			Key:        cfg.Key,
+			CryptoKey:  cfg.CryptoKey,
 		}),
 		jobs: make(chan models.Metrics, cfg.RateLimit),
 	}

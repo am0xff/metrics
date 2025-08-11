@@ -12,6 +12,7 @@ type Config struct {
 	ReportInterval int    `env:"REPORT_INTERVAL" envDefault:"10"`
 	Key            string `env:"KEY" envDefault:""`
 	RateLimit      int    `env:"RATE_LIMIT" envDefault:"1"`
+	CryptoKey      string `env:"CRYPTO_KEY" envDefault:""`
 }
 
 func LoadConfig() (Config, error) {
@@ -27,6 +28,7 @@ func LoadConfig() (Config, error) {
 	fReport := flag.Int("r", cfg.ReportInterval, "Интервал отправки метрик (сек)")
 	fKey := flag.String("k", cfg.Key, "HashSHA256 ключ")
 	fRateLimit := flag.Int("l", cfg.RateLimit, "Количество одновременно исходящих запросов на сервер")
+	fCryptoKey := flag.String("crypto-key", cfg.CryptoKey, "Путь к файлу с публичным ключом для шифрования")
 	flag.Parse()
 
 	cfg.ServerAddr = *fAddr
@@ -34,6 +36,7 @@ func LoadConfig() (Config, error) {
 	cfg.ReportInterval = *fReport
 	cfg.Key = *fKey
 	cfg.RateLimit = *fRateLimit
+	cfg.CryptoKey = *fCryptoKey
 
 	return cfg, nil
 }

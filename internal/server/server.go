@@ -74,6 +74,7 @@ func Run() error {
 
 	handler := middleware.HashMiddleware(r, cfg.Key)
 	handler = middleware.GzipMiddleware(handler, cfg.Key)
+	handler = middleware.RSAMiddleware(handler, cfg.CryptoKey)
 	handler = middleware.LoggerMiddleware(handler)
 
 	if cfg.StoreInterval != 0 {

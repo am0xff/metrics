@@ -15,6 +15,7 @@ type Config struct {
 	Key             string `env:"KEY" envDefault:""`
 	PprofEnabled    bool   `env:"PPROF_ENABLED" envDefault:"true"`
 	PprofAddr       string `env:"PPROF_PORT" envDefault:":6060"`
+	CryptoKey       string `env:"CRYPTO_KEY" envDefault:""`
 }
 
 func LoadConfig() (Config, error) {
@@ -33,6 +34,7 @@ func LoadConfig() (Config, error) {
 	fKey := flag.String("k", cfg.Key, "HashSHA256 ключ")
 	pprofEnabled := flag.Bool("pe", cfg.PprofEnabled, "pprof Enabled")
 	pprofAddr := flag.String("pp", cfg.PprofAddr, "pprof address")
+	fCryptoKey := flag.String("crypto-key", cfg.CryptoKey, "Путь к файлу с приватным ключом для расшифровки")
 
 	flag.Parse()
 
@@ -44,6 +46,7 @@ func LoadConfig() (Config, error) {
 	cfg.Key = *fKey
 	cfg.PprofEnabled = *pprofEnabled
 	cfg.PprofAddr = *pprofAddr
+	cfg.CryptoKey = *fCryptoKey
 
 	return cfg, nil
 }
