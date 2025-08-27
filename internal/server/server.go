@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/am0xff/metrics/internal/grpc/server"
 	"github.com/am0xff/metrics/internal/logger"
 	"github.com/am0xff/metrics/internal/middleware"
 	"github.com/am0xff/metrics/internal/router"
@@ -74,6 +75,70 @@ func Run() error {
 		s = ms
 	}
 
+	switch cfg.Protocol {
+	case "grpc":
+		return runGRPCServer(cfg, s, fs)
+	case "http":
+		return runHTTPServer(cfg, s, fs)
+	default:
+		return fmt.Errorf("unsupported protocol: %s", cfg.Protocol)
+	}
+}
+
+func runGRPCServer(cfg Config, s storage.StorageProvider, fs *fstorage.FileStorage) error {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	var saveWg sync.WaitGroup
+	saveCtx, saveCancel := context.WithCancel(context.Background())
+
+	if cfg.StoreInterval != 0 {
+		saveWg.Add(1)
+		go func() {
+			defer saveWg.Done()
+			ticker := time.NewTicker(time.Duration(cfg.StoreInterval) * time.Second)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-saveCtx.Done():
+					return
+				case <-ticker.C:
+					if cfg.DatabaseDSN == "" && cfg.FileStoragePath != "" {
+						if err := fs.Save(); err != nil {
+							log.Printf("Save storage to the file: %v", err)
+						}
+					}
+				}
+			}
+		}()
+	}
+
+	go func() {
+		fmt.Printf("Running gRPC server on %s\n", cfg.GRPCAddr)
+		if err := server.RunGRPCServer(cfg.GRPCAddr, s); err != nil {
+			log.Fatalf("gRPC server failed: %v", err)
+		}
+	}()
+
+	sig := <-sigChan
+	fmt.Printf("\nReceived signal: %v. Shutting down gracefully...\n", sig)
+
+	saveCancel()
+	saveWg.Wait()
+
+	// Финальное сохранение
+	if cfg.DatabaseDSN == "" && cfg.FileStoragePath != "" {
+		if err := fs.Save(); err != nil {
+			log.Printf("Final save failed: %v", err)
+		}
+	}
+
+	fmt.Println("gRPC server stopped gracefully")
+	return nil
+}
+
+func runHTTPServer(cfg Config, s storage.StorageProvider, fs *fstorage.FileStorage) error {
 	r := router.SetupRoutes(s)
 
 	handler := middleware.HashMiddleware(r, cfg.Key)
@@ -116,9 +181,9 @@ func Run() error {
 	}
 
 	go func() {
-		fmt.Println("Running server on", cfg.ServerAddr)
+		fmt.Printf("Running HTTP server on %s\n", cfg.ServerAddr)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server failed: %v", err)
+			log.Fatalf("HTTP server failed: %v", err)
 		}
 	}()
 
@@ -130,7 +195,7 @@ func Run() error {
 
 	if cfg.DatabaseDSN == "" && cfg.FileStoragePath != "" {
 		if err := fs.Save(); err != nil {
-			log.Printf("Save storage to the file: %v", err)
+			log.Printf("Final save failed: %v", err)
 		}
 	}
 
@@ -142,5 +207,6 @@ func Run() error {
 		return err
 	}
 
+	fmt.Println("HTTP server stopped gracefully")
 	return nil
 }

@@ -21,6 +21,8 @@ type Config struct {
 	CryptoKey       string `env:"CRYPTO_KEY" envDefault:""`
 	ConfigFile      string `env:"CONFIG" envDefault:""`
 	TrustedSubnet   string `env:"TRUSTED_SUBNET" envDefault:""`
+	Protocol        string `env:"PROTOCOL" envDefault:"http"`
+	GRPCAddr        string `env:"GRPC_ADDR" envDefault:":9090"`
 }
 
 func LoadConfig() (Config, error) {
@@ -42,6 +44,8 @@ func LoadConfig() (Config, error) {
 	fCryptoKey := flag.String("crypto-key", cfg.CryptoKey, "Путь к файлу с приватным ключом для расшифровки")
 	fConfigFile := flag.String("c", cfg.ConfigFile, "Путь к файлу конфигурации")
 	trustedSubnet := flag.String("t", cfg.TrustedSubnet, "Доверенная подсеть в формате CIDR")
+	fProtocol := flag.String("p", cfg.Protocol, "Имя протокола")
+	fGRPCAddr := flag.String("g", cfg.GRPCAddr, "GRPC сервер адрес")
 	flag.Parse()
 
 	cfg.ServerAddr = *serverAddr
@@ -55,6 +59,8 @@ func LoadConfig() (Config, error) {
 	cfg.CryptoKey = *fCryptoKey
 	cfg.ConfigFile = *fConfigFile
 	cfg.TrustedSubnet = *trustedSubnet
+	cfg.Protocol = *fProtocol
+	cfg.GRPCAddr = *fGRPCAddr
 
 	if *fConfigFile != "" && *fConfigFile != cfg.ConfigFile {
 		tempCfg := cfg
