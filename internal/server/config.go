@@ -20,6 +20,7 @@ type Config struct {
 	PprofAddr       string `env:"PPROF_PORT" envDefault:":6060"`
 	CryptoKey       string `env:"CRYPTO_KEY" envDefault:""`
 	ConfigFile      string `env:"CONFIG" envDefault:""`
+	TrustedSubnet   string `env:"TRUSTED_SUBNET" envDefault:""`
 }
 
 func LoadConfig() (Config, error) {
@@ -40,6 +41,7 @@ func LoadConfig() (Config, error) {
 	pprofAddr := flag.String("pp", cfg.PprofAddr, "pprof address")
 	fCryptoKey := flag.String("crypto-key", cfg.CryptoKey, "Путь к файлу с приватным ключом для расшифровки")
 	fConfigFile := flag.String("c", cfg.ConfigFile, "Путь к файлу конфигурации")
+	trustedSubnet := flag.String("t", cfg.TrustedSubnet, "Доверенная подсеть в формате CIDR")
 	flag.Parse()
 
 	cfg.ServerAddr = *serverAddr
@@ -52,6 +54,7 @@ func LoadConfig() (Config, error) {
 	cfg.PprofAddr = *pprofAddr
 	cfg.CryptoKey = *fCryptoKey
 	cfg.ConfigFile = *fConfigFile
+	cfg.TrustedSubnet = *trustedSubnet
 
 	if *fConfigFile != "" && *fConfigFile != cfg.ConfigFile {
 		tempCfg := cfg
@@ -69,6 +72,7 @@ func LoadConfig() (Config, error) {
 		tempCfg.PprofAddr = *pprofAddr
 		tempCfg.CryptoKey = *fCryptoKey
 		tempCfg.ConfigFile = *fConfigFile
+		tempCfg.TrustedSubnet = *trustedSubnet
 
 		cfg = tempCfg
 	}
@@ -93,6 +97,7 @@ func loadFromJSON(configPath string, cfg *Config) error {
 		StoreFile     string `json:"store_file"`
 		DatabaseDSN   string `json:"database_dsn"`
 		CryptoKey     string `json:"crypto_key"`
+		TrustedSubnet string `json:"trusted_subnet"`
 	}
 
 	if err := json.Unmarshal(data, &jsonConfig); err != nil {
@@ -118,6 +123,9 @@ func loadFromJSON(configPath string, cfg *Config) error {
 		if duration, err := time.ParseDuration(jsonConfig.StoreInterval); err == nil {
 			cfg.StoreInterval = int(duration.Seconds())
 		}
+	}
+	if jsonConfig.TrustedSubnet != "" {
+		cfg.TrustedSubnet = jsonConfig.TrustedSubnet
 	}
 
 	return nil

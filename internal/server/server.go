@@ -79,6 +79,7 @@ func Run() error {
 	handler := middleware.HashMiddleware(r, cfg.Key)
 	handler = middleware.GzipMiddleware(handler, cfg.Key)
 	handler = middleware.RSAMiddleware(handler, cfg.CryptoKey)
+	handler = middleware.TrustedSubnetMiddleware(handler, cfg.TrustedSubnet)
 	handler = middleware.LoggerMiddleware(handler)
 
 	server := &http.Server{

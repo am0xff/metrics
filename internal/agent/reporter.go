@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"strconv"
 
@@ -23,13 +24,27 @@ type ReporterConfig struct {
 type Reporter struct {
 	client *http.Client
 	cfg    *ReporterConfig
+	realIP string
 }
 
 func NewReporter(cfg *ReporterConfig) *Reporter {
 	return &Reporter{
 		cfg:    cfg,
 		client: http.DefaultClient,
+		realIP: getRealIP(),
 	}
+}
+
+func getRealIP() string {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Printf("Failed to get real IP: %v", err)
+		return ""
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP.String()
 }
 
 func (r *Reporter) Report(gauges map[string]float64, counters map[string]int64) {
@@ -119,6 +134,10 @@ func (r *Reporter) send(metricType storage.MetricType, name, value string) {
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
+
+	if r.realIP != "" {
+		req.Header.Set("X-Real-IP", r.realIP)
+	}
 
 	// Устанавливаем заголовки в зависимости от шифрования
 	if r.cfg.CryptoKey != "" {
@@ -227,6 +246,10 @@ func (r *Reporter) sendBatch(gauges map[string]float64, counters map[string]int6
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+
+	if r.realIP != "" {
+		req.Header.Set("X-Real-IP", r.realIP)
+	}
 
 	// Устанавливаем заголовки в зависимости от шифрования
 	if r.cfg.CryptoKey != "" {
