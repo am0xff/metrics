@@ -17,21 +17,42 @@ import (
 )
 
 type Agent struct {
-	cfg      Config
-	reporter *Reporter
-	jobs     chan models.Metrics
+	cfg          Config
+	httpReporter *Reporter
+	grpcReporter *GRPCReporterWrapper
+	jobs         chan models.Metrics
 }
 
-func NewAgent(cfg Config) *Agent {
-	return &Agent{
-		cfg: cfg,
-		reporter: NewReporter(&ReporterConfig{
+func NewAgent(cfg Config) (*Agent, error) {
+	agent := &Agent{
+		cfg:  cfg,
+		jobs: make(chan models.Metrics, cfg.RateLimit),
+	}
+
+	switch cfg.Protocol {
+	case "grpc":
+		grpcReporter, err := NewGRPCReporter(&ReporterConfig{
+			ServerAddr: cfg.GRPCAddr,
+			Key:        cfg.Key,
+			CryptoKey:  cfg.CryptoKey,
+		})
+		if err != nil {
+			return nil, err
+		}
+		agent.grpcReporter = grpcReporter
+
+	case "http":
+		agent.httpReporter = NewReporter(&ReporterConfig{
 			ServerAddr: cfg.ServerAddr,
 			Key:        cfg.Key,
 			CryptoKey:  cfg.CryptoKey,
-		}),
-		jobs: make(chan models.Metrics, cfg.RateLimit),
+		})
+
+	default:
+		return nil, fmt.Errorf("unsupported protocol: %s", cfg.Protocol)
 	}
+
+	return agent, nil
 }
 
 func Run() error {
@@ -42,8 +63,12 @@ func Run() error {
 		log.Fatalf("load config: %v", err)
 	}
 
-	agent := NewAgent(cfg)
-	fmt.Println("Running agent on", cfg.ServerAddr)
+	agent, err := NewAgent(cfg)
+	if err != nil {
+		log.Fatalf("create agent: %v", err)
+	}
+
+	fmt.Printf("Running agent on %s (protocol: %s)\n", cfg.ServerAddr, cfg.Protocol)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	sigChan := make(chan os.Signal, 1)
@@ -55,16 +80,54 @@ func Run() error {
 		cancel()
 	}()
 
-	for i := 0; i < cfg.RateLimit; i++ {
+	// HTTP workers
+	if cfg.Protocol == "http" {
+		for i := 0; i < cfg.RateLimit; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case m := <-agent.jobs:
+						agent.httpReporter.send(m.MType, m.ID, m.String())
+					}
+				}
+			}()
+		}
+	}
+
+	// gRPC batch sender
+	if cfg.Protocol == "grpc" {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			ticker := time.NewTicker(1 * time.Second)
+			defer ticker.Stop()
+
+			gauges := make(map[string]float64)
+			counters := make(map[string]int64)
+
 			for {
 				select {
 				case <-ctx.Done():
+					if len(gauges) > 0 || len(counters) > 0 {
+						agent.grpcReporter.ReportBatch(gauges, counters)
+					}
 					return
+				case <-ticker.C:
+					if len(gauges) > 0 || len(counters) > 0 {
+						agent.grpcReporter.ReportBatch(gauges, counters)
+						gauges = make(map[string]float64)
+						counters = make(map[string]int64)
+					}
 				case m := <-agent.jobs:
-					agent.reporter.send(m.MType, m.ID, m.String())
+					if m.MType == storage.MetricTypeGauge && m.Value != nil {
+						gauges[m.ID] = *m.Value
+					} else if m.MType == storage.MetricTypeCounter && m.Delta != nil {
+						counters[m.ID] = *m.Delta
+					}
 				}
 			}
 		}()
@@ -147,6 +210,11 @@ func Run() error {
 
 	wg.Wait()
 	close(agent.jobs)
+	
+	if agent.grpcReporter != nil {
+		agent.grpcReporter.Close()
+	}
 
+	fmt.Println("Agent stopped gracefully")
 	return nil
 }

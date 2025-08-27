@@ -17,6 +17,8 @@ type Config struct {
 	RateLimit      int    `env:"RATE_LIMIT" envDefault:"1"`
 	CryptoKey      string `env:"CRYPTO_KEY" envDefault:""`
 	ConfigFile     string `env:"CONFIG" envDefault:""`
+	Protocol       string `env:"PROTOCOL" envDefault:"http"`
+	GRPCAddr       string `env:"GRPC_ADDR" envDefault:":9090"`
 }
 
 func LoadConfig() (Config, error) {
@@ -34,6 +36,8 @@ func LoadConfig() (Config, error) {
 	fRateLimit := flag.Int("l", cfg.RateLimit, "Количество одновременно исходящих запросов на сервер")
 	fCryptoKey := flag.String("crypto-key", cfg.CryptoKey, "Путь к файлу с публичным ключом для шифрования")
 	fConfigFile := flag.String("c", cfg.ConfigFile, "Путь к файлу конфигурации")
+	fProtocol := flag.String("p", cfg.Protocol, "Имя протокола")
+	fGRPCAddr := flag.String("g", cfg.GRPCAddr, "GRPC сервер адрес")
 	flag.Parse()
 
 	cfg.ServerAddr = *fAddr
@@ -43,6 +47,8 @@ func LoadConfig() (Config, error) {
 	cfg.RateLimit = *fRateLimit
 	cfg.CryptoKey = *fCryptoKey
 	cfg.ConfigFile = *fConfigFile
+	cfg.Protocol = *fProtocol
+	cfg.GRPCAddr = *fGRPCAddr
 
 	if *fConfigFile != "" && *fConfigFile != cfg.ConfigFile {
 		tempCfg := cfg
