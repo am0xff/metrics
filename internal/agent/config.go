@@ -1,7 +1,10 @@
 package agent
 
 import (
+	"encoding/json"
 	"flag"
+	"os"
+	"time"
 
 	"github.com/caarlos0/env/v6"
 )
@@ -12,6 +15,8 @@ type Config struct {
 	ReportInterval int    `env:"REPORT_INTERVAL" envDefault:"10"`
 	Key            string `env:"KEY" envDefault:""`
 	RateLimit      int    `env:"RATE_LIMIT" envDefault:"1"`
+	CryptoKey      string `env:"CRYPTO_KEY" envDefault:""`
+	ConfigFile     string `env:"CONFIG" envDefault:""`
 }
 
 func LoadConfig() (Config, error) {
@@ -27,6 +32,8 @@ func LoadConfig() (Config, error) {
 	fReport := flag.Int("r", cfg.ReportInterval, "Интервал отправки метрик (сек)")
 	fKey := flag.String("k", cfg.Key, "HashSHA256 ключ")
 	fRateLimit := flag.Int("l", cfg.RateLimit, "Количество одновременно исходящих запросов на сервер")
+	fCryptoKey := flag.String("crypto-key", cfg.CryptoKey, "Путь к файлу с публичным ключом для шифрования")
+	fConfigFile := flag.String("c", cfg.ConfigFile, "Путь к файлу конфигурации")
 	flag.Parse()
 
 	cfg.ServerAddr = *fAddr
@@ -34,6 +41,66 @@ func LoadConfig() (Config, error) {
 	cfg.ReportInterval = *fReport
 	cfg.Key = *fKey
 	cfg.RateLimit = *fRateLimit
+	cfg.CryptoKey = *fCryptoKey
+	cfg.ConfigFile = *fConfigFile
+
+	if *fConfigFile != "" && *fConfigFile != cfg.ConfigFile {
+		tempCfg := cfg
+		if err := loadFromJSON(*fConfigFile, &tempCfg); err != nil {
+			return cfg, err
+		}
+
+		tempCfg.ServerAddr = *fAddr
+		tempCfg.PollInterval = *fPoll
+		tempCfg.ReportInterval = *fReport
+		tempCfg.Key = *fKey
+		tempCfg.RateLimit = *fRateLimit
+		tempCfg.CryptoKey = *fCryptoKey
+		tempCfg.ConfigFile = *fConfigFile
+
+		cfg = tempCfg
+	}
 
 	return cfg, nil
+}
+
+func loadFromJSON(configPath string, cfg *Config) error {
+	if configPath == "" {
+		return nil
+	}
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return err
+	}
+
+	var jsonConfig struct {
+		Address        string `json:"address"`
+		ReportInterval string `json:"report_interval"`
+		PollInterval   string `json:"poll_interval"`
+		CryptoKey      string `json:"crypto_key"`
+	}
+
+	if err := json.Unmarshal(data, &jsonConfig); err != nil {
+		return err
+	}
+
+	if jsonConfig.Address != "" {
+		cfg.ServerAddr = jsonConfig.Address
+	}
+	if jsonConfig.CryptoKey != "" {
+		cfg.CryptoKey = jsonConfig.CryptoKey
+	}
+	if jsonConfig.ReportInterval != "" {
+		if duration, err := time.ParseDuration(jsonConfig.ReportInterval); err == nil {
+			cfg.ReportInterval = int(duration.Seconds())
+		}
+	}
+	if jsonConfig.PollInterval != "" {
+		if duration, err := time.ParseDuration(jsonConfig.PollInterval); err == nil {
+			cfg.PollInterval = int(duration.Seconds())
+		}
+	}
+
+	return nil
 }

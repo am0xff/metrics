@@ -17,6 +17,7 @@ import (
 type ReporterConfig struct {
 	ServerAddr string
 	Key        string
+	CryptoKey  string
 }
 
 type Reporter struct {
@@ -93,6 +94,24 @@ func (r *Reporter) send(metricType storage.MetricType, name, value string) {
 	}
 
 	compressed := buf.Bytes()
+
+	encryptedData := compressed
+	if r.cfg.CryptoKey != "" {
+		publicKey, err := utils.LoadPublicKey(r.cfg.CryptoKey)
+		if err != nil {
+			log.Printf("failed to load public key: %v", err)
+			return
+		}
+
+		encrypted, err := utils.EncryptRSA(compressed, publicKey)
+		if err != nil {
+			log.Printf("failed to encrypt data: %v", err)
+			return
+		}
+
+		encryptedData = encrypted
+	}
+
 	url := fmt.Sprintf("http://%s/update/", r.cfg.ServerAddr)
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(compressed))
 	if err != nil {
@@ -100,9 +119,20 @@ func (r *Reporter) send(metricType storage.MetricType, name, value string) {
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Content-Encoding", "gzip")
-	if r.cfg.Key != "" {
-		req.Header.Set("HashSHA256", utils.CreateHash(compressed, r.cfg.Key))
+
+	// Устанавливаем заголовки в зависимости от шифрования
+	if r.cfg.CryptoKey != "" {
+		// Данные зашифрованы - не устанавливаем Content-Encoding
+		// Хеш считаем от зашифрованных данных
+		if r.cfg.Key != "" {
+			req.Header.Set("HashSHA256", utils.CreateHash(encryptedData, r.cfg.Key))
+		}
+	} else {
+		// Данные только сжаты - устанавливаем Content-Encoding
+		req.Header.Set("Content-Encoding", "gzip")
+		if r.cfg.Key != "" {
+			req.Header.Set("HashSHA256", utils.CreateHash(encryptedData, r.cfg.Key))
+		}
 	}
 
 	resp, err := r.client.Do(req)
@@ -172,6 +202,23 @@ func (r *Reporter) sendBatch(gauges map[string]float64, counters map[string]int6
 		return
 	}
 	compressed := buf.Bytes()
+
+	encryptedData := compressed
+	if r.cfg.CryptoKey != "" {
+		publicKey, err := utils.LoadPublicKey(r.cfg.CryptoKey)
+		if err != nil {
+			log.Printf("failed to load public key: %v", err)
+			return
+		}
+
+		encrypted, err := utils.EncryptRSA(compressed, publicKey)
+		if err != nil {
+			log.Printf("failed to encrypt data: %v", err)
+			return
+		}
+		encryptedData = encrypted
+	}
+
 	url := fmt.Sprintf("http://%s/updates/", r.cfg.ServerAddr)
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(compressed))
 	if err != nil {
@@ -180,9 +227,19 @@ func (r *Reporter) sendBatch(gauges map[string]float64, counters map[string]int6
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Content-Encoding", "gzip")
-	if r.cfg.Key != "" {
-		req.Header.Set("HashSHA256", utils.CreateHash(compressed, r.cfg.Key))
+
+	// Устанавливаем заголовки в зависимости от шифрования
+	if r.cfg.CryptoKey != "" {
+		// Данные зашифрованы - не устанавливаем Content-Encoding
+		if r.cfg.Key != "" {
+			req.Header.Set("HashSHA256", utils.CreateHash(encryptedData, r.cfg.Key))
+		}
+	} else {
+		// Данные только сжаты - устанавливаем Content-Encoding
+		req.Header.Set("Content-Encoding", "gzip")
+		if r.cfg.Key != "" {
+			req.Header.Set("HashSHA256", utils.CreateHash(encryptedData, r.cfg.Key))
+		}
 	}
 
 	resp, err := r.client.Do(req)

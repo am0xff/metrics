@@ -1,7 +1,10 @@
 package server
 
 import (
+	"encoding/json"
 	"flag"
+	"os"
+	"time"
 
 	"github.com/caarlos0/env/v6"
 )
@@ -15,6 +18,8 @@ type Config struct {
 	Key             string `env:"KEY" envDefault:""`
 	PprofEnabled    bool   `env:"PPROF_ENABLED" envDefault:"true"`
 	PprofAddr       string `env:"PPROF_PORT" envDefault:":6060"`
+	CryptoKey       string `env:"CRYPTO_KEY" envDefault:""`
+	ConfigFile      string `env:"CONFIG" envDefault:""`
 }
 
 func LoadConfig() (Config, error) {
@@ -33,7 +38,8 @@ func LoadConfig() (Config, error) {
 	fKey := flag.String("k", cfg.Key, "HashSHA256 ключ")
 	pprofEnabled := flag.Bool("pe", cfg.PprofEnabled, "pprof Enabled")
 	pprofAddr := flag.String("pp", cfg.PprofAddr, "pprof address")
-
+	fCryptoKey := flag.String("crypto-key", cfg.CryptoKey, "Путь к файлу с приватным ключом для расшифровки")
+	fConfigFile := flag.String("c", cfg.ConfigFile, "Путь к файлу конфигурации")
 	flag.Parse()
 
 	cfg.ServerAddr = *serverAddr
@@ -44,6 +50,75 @@ func LoadConfig() (Config, error) {
 	cfg.Key = *fKey
 	cfg.PprofEnabled = *pprofEnabled
 	cfg.PprofAddr = *pprofAddr
+	cfg.CryptoKey = *fCryptoKey
+	cfg.ConfigFile = *fConfigFile
+
+	if *fConfigFile != "" && *fConfigFile != cfg.ConfigFile {
+		tempCfg := cfg
+		if err := loadFromJSON(*fConfigFile, &tempCfg); err != nil {
+			return cfg, err
+		}
+
+		tempCfg.ServerAddr = *serverAddr
+		tempCfg.StoreInterval = *storeInterval
+		tempCfg.FileStoragePath = *fileStoragePath
+		tempCfg.Restore = *restore
+		tempCfg.DatabaseDSN = *databaseDSN
+		tempCfg.Key = *fKey
+		tempCfg.PprofEnabled = *pprofEnabled
+		tempCfg.PprofAddr = *pprofAddr
+		tempCfg.CryptoKey = *fCryptoKey
+		tempCfg.ConfigFile = *fConfigFile
+
+		cfg = tempCfg
+	}
 
 	return cfg, nil
+}
+
+func loadFromJSON(configPath string, cfg *Config) error {
+	if configPath == "" {
+		return nil
+	}
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return err
+	}
+
+	var jsonConfig struct {
+		Address       string `json:"address"`
+		Restore       *bool  `json:"restore"`
+		StoreInterval string `json:"store_interval"`
+		StoreFile     string `json:"store_file"`
+		DatabaseDSN   string `json:"database_dsn"`
+		CryptoKey     string `json:"crypto_key"`
+	}
+
+	if err := json.Unmarshal(data, &jsonConfig); err != nil {
+		return err
+	}
+
+	if jsonConfig.Address != "" {
+		cfg.ServerAddr = jsonConfig.Address
+	}
+	if jsonConfig.Restore != nil {
+		cfg.Restore = *jsonConfig.Restore
+	}
+	if jsonConfig.StoreFile != "" {
+		cfg.FileStoragePath = jsonConfig.StoreFile
+	}
+	if jsonConfig.DatabaseDSN != "" {
+		cfg.DatabaseDSN = jsonConfig.DatabaseDSN
+	}
+	if jsonConfig.CryptoKey != "" {
+		cfg.CryptoKey = jsonConfig.CryptoKey
+	}
+	if jsonConfig.StoreInterval != "" {
+		if duration, err := time.ParseDuration(jsonConfig.StoreInterval); err == nil {
+			cfg.StoreInterval = int(duration.Seconds())
+		}
+	}
+
+	return nil
 }
